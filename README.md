@@ -1,16 +1,63 @@
-# dba
+# 부평동부교회 애플리케이션
 
-A new Flutter project.
+## 개요
+이 프로젝트는 교회의 성도들이 편리하게 정보를 공유하고, 교회 내 다양한 업무를 디지털화하여 보다 효율적으로 운영할 수 있도록 하는 모바일 애플리케이션입니다. **Flutter**와 **Supabase**를 기반으로 개발되며, 주요 기능으로 회원관리, 게시판, 주보 공지, 성도 요람, 알림 기능 등이 포함됩니다.
 
-## Getting Started
+## 기술 스택
+- **프론트엔드**: Flutter
+- **백엔드**: Supabase
+- **데이터베이스**: Supabase PostgreSQL
+- **인증**: Supabase Authentication
+- **클라우드 호스팅**: Supabase
 
-This project is a starting point for a Flutter application.
+## 주요 기능
+### 1. 회원가입 및 로그인
+- 소셜(kakao) 로그인 지원
 
-A few resources to get you started if this is your first Flutter project:
+### 2. 게시판 기능
+- 공지사항 및 일반 게시물 업로드
+- 댓글 및 좋아요 기능
+- 게시물 카테고리별 분류
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### 3. 주보 공지
+- 주보 업로드 및 알림 기능 제공
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### 4. 성도 요람
+- 성도 연락처 및 간단한 정보 제공
+- 성도의 직책(예: 장로, 집사 등) 및 그룹 정보(예: 청년부, 장년부) 추가
+
+### 5. 알림 기능
+- 모든 사용자에게 공지 알림 푸시 제공
+- 특정 사용자 또는 그룹 대상 알림 지원
+
+### 6. UI 디자인
+- 연령대에 맞춘 **기본형(큰 아이콘, 간단한 레이아웃)** 및 **인스타그램 스타일(인피니티 스크롤)** UI 가능
+
+## 설치 및 실행 방법
+### 1. Flutter 환경 설정
+Flutter가 설치되어 있지 않다면, [Flutter 공식 문서](https://flutter.dev/docs/get-started/install)를 참고하여 설치하세요.
+```bash
+flutter doctor
+```
+
+### 2. 프로젝트 클론 및 패키지 설치
+```bash
+git clone https://github.com/jyub86/DBA.git
+cd dba
+flutter pub get
+```
+
+### 3. Supabase, Firebase 환경 변수 설정
+Supabase 프로젝트를 생성한 후, `.env` 파일을 만들어 사용합니다.
+환경 변수는 공개하지 않습니다.
+
+### 4. 앱 실행
+```bash
+flutter run
+```
+
+## 개발 일정
+- **2025년 1월**: 요구사항 분석 및 상세 기획
+- **2025년 2월**: UI/UX 디자인, 기능 개발 및 테스트
+- **2025년 3월**: 베타 버전 출시 및 피드백 반영
+- **2025년 4월**: 정식 출시
