@@ -109,6 +109,8 @@ supabase/.temp/
 run.sh
 !run.sh.example
 
+service-account.json
+
 # Firebase configuration files
 google-services.json
 **/android/app/google-services.json
