@@ -14,6 +14,7 @@
 migrate_working_dir/
 
 # IntelliJ related
+.vscode/
 *.iml
 *.ipr
 *.iws
@@ -53,6 +54,7 @@ app.*.map.json
 **/android/gradlew.bat
 **/android/local.properties
 **/android/**/GeneratedPluginRegistrant.*
+**/android/app/.cxx/
 
 # iOS specific
 **/ios/**/*.mode1v3
@@ -83,7 +85,20 @@ app.*.map.json
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
-**/ios/build/*
+
+android/local.properties
+ios/Flutter/Debug.xcconfig
+ios/Flutter/Release.xcconfig
+ios/Flutter/Generated.xcconfig
+macos/Flutter/Flutter-Debug.xcconfig
+macos/Flutter/Flutter-Release.xcconfig
+
+linux/flutter/generated_*
+macos/Flutter/GeneratedPluginRegistrant.swift
+windows/flutter/generated_*
+ios/Flutter/Generated.xcconfig
+
+supabase/.temp/
 
 # Environment files
 .env
