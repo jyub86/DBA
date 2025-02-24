@@ -109,7 +109,9 @@ supabase/.temp/
 run.sh
 !run.sh.example
 
+# Sensitive credentials
 service-account.json
+*.key.json
 
 # Firebase configuration files
 google-services.json
