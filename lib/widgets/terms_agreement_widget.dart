@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/terms_agreement.dart';
 import '../constants/terms_constants.dart';
+import 'terms_webview.dart';
 
 class TermsAgreementWidget extends StatelessWidget {
   final TermsAgreement agreement;
@@ -82,19 +83,12 @@ class TermsAgreementWidget extends StatelessWidget {
               const Spacer(),
               TextButton(
                 onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('이용약관'),
-                      content: const SingleChildScrollView(
-                        child: Text(TermsConstants.termsOfService),
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const TermsWebView(
+                        assetPath: TermsConstants.termsOfServicePath,
+                        title: '이용약관',
                       ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('확인'),
-                        ),
-                      ],
                     ),
                   );
                 },
@@ -131,19 +125,12 @@ class TermsAgreementWidget extends StatelessWidget {
               const Spacer(),
               TextButton(
                 onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('개인정보 처리방침'),
-                      content: const SingleChildScrollView(
-                        child: Text(TermsConstants.privacyPolicy),
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const TermsWebView(
+                        assetPath: TermsConstants.privacyPolicyPath,
+                        title: '개인정보 처리방침',
                       ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('확인'),
-                        ),
-                      ],
                     ),
                   );
                 },

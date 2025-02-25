@@ -44,6 +44,7 @@ dependencies:
   device_info_plus: ^9.1.2
   flutter_local_notifications: ^17.2.1
   table_calendar: ^3.0.9
+  webview_flutter: ^4.7.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -110,6 +111,8 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/images/church_logo.png
+    - docs/terms-of-service.html
+    - docs/privacy-policy.html
 
 flutter_launcher_icons:
   android: "launcher_icon"

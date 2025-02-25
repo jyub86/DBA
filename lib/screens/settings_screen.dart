@@ -6,6 +6,7 @@ import 'package:path/path.dart' as path;
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/user_model.dart';
 import '../constants/terms_constants.dart';
+import '../widgets/terms_webview.dart';
 import 'banner_settings_screen.dart';
 import '../services/auth_service.dart';
 import '../providers/user_data_provider.dart';
@@ -428,37 +429,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showTermsDialog(BuildContext context) async {
-    return showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('이용약관'),
-        content: const SingleChildScrollView(
-          child: Text(TermsConstants.termsOfService),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const TermsWebView(
+          assetPath: TermsConstants.termsOfServicePath,
+          title: '이용약관',
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('확인'),
-          ),
-        ],
       ),
     );
   }
 
   Future<void> _showPrivacyDialog(BuildContext context) async {
-    return showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('개인정보 처리방침'),
-        content: const SingleChildScrollView(
-          child: Text(TermsConstants.privacyPolicy),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const TermsWebView(
+          assetPath: TermsConstants.privacyPolicyPath,
+          title: '개인정보 처리방침',
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('확인'),
-          ),
-        ],
       ),
     );
   }
