@@ -427,7 +427,7 @@ class _YearbookScreenState extends State<YearbookScreen> {
             children: [
               if (user.email != null && user.email!.isNotEmpty) ...[
                 const Text(
-                  '이메일',
+                  '이메일(카카오ID)',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -464,31 +464,33 @@ class _YearbookScreenState extends State<YearbookScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
-              if (user.gender != null) ...[
-                const Text(
-                  '성별',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+              if (isManager) ...[
+                if (user.gender != null) ...[
+                  const Text(
+                    '성별',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(user.gender == '남' ? '남성' : '여성'),
-                const SizedBox(height: 16),
-              ],
-              if (user.birthDate != null) ...[
-                const Text(
-                  '생년월일',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                  const SizedBox(height: 4),
+                  Text(user.gender == '남' ? '남성' : '여성'),
+                  const SizedBox(height: 16),
+                ],
+                if (user.birthDate != null) ...[
+                  const Text(
+                    '생년월일',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${user.birthDate!.year}년 ${user.birthDate!.month}월 ${user.birthDate!.day}일',
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${user.birthDate!.year}년 ${user.birthDate!.month}월 ${user.birthDate!.day}일',
+                  ),
+                  const SizedBox(height: 16),
+                ],
               ],
             ],
           ),
