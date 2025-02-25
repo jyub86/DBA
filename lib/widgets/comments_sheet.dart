@@ -440,7 +440,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                 right: 8.0,
                 bottom: 56.0 + MediaQuery.of(context).viewInsets.bottom,
               ),
-              child: (currentUser.member ?? false)
+              child: (currentUser.member ?? false) && currentUser.isInfoPublic
                   ? Row(
                       children: [
                         Expanded(
@@ -464,9 +464,11 @@ class _CommentsSheetState extends State<CommentsSheet> {
                   : Container(
                       padding: const EdgeInsets.all(16),
                       alignment: Alignment.center,
-                      child: const Text(
-                        '교인 인증 후 댓글을 작성할 수 있습니다.',
-                        style: TextStyle(color: Colors.grey),
+                      child: Text(
+                        !(currentUser.member ?? false)
+                            ? '교인 인증 후 댓글을 작성할 수 있습니다.'
+                            : '정보 비공개 상태에서는 댓글을 작성할 수 없습니다.',
+                        style: const TextStyle(color: Colors.grey),
                       ),
                     ),
             ),

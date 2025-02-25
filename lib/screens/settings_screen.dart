@@ -340,39 +340,95 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showProfileEditDialog(BuildContext context) async {
+    final userData = await _userDataProvider.getCurrentUser();
+    bool isInfoPublic = userData.isInfoPublic;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final dialogWidth = screenWidth * 0.9; // 화면 너비의 90%
+
     return showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('내 정보 변경'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: '이름'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          child: SizedBox(
+            width: dialogWidth,
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '내 정보 변경',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(labelText: '이름'),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _phoneController,
+                    decoration: const InputDecoration(labelText: '전화번호'),
+                    keyboardType: TextInputType.phone,
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '정보 공개 여부',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                      Switch(
+                        value: isInfoPublic,
+                        onChanged: (value) {
+                          setState(() {
+                            isInfoPublic = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  if (!isInfoPublic) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '정보 비공개로 변경 시, 기존에 작성했던 게시글 및 댓글도 비공개로 변경됩니다. 또한 일부 서비스(게시 글 작성 및 주소록 서비스) 사용에 제한을 받을 수 있습니다.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('취소'),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton(
+                        onPressed: () => _updateProfile(
+                          context,
+                          _nameController.text,
+                          _phoneController.text,
+                          isInfoPublic,
+                        ),
+                        child: const Text('저장'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _phoneController,
-              decoration: const InputDecoration(labelText: '전화번호'),
-              keyboardType: TextInputType.phone,
-            ),
-          ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => _updateProfile(
-              context,
-              _nameController.text,
-              _phoneController.text,
-            ),
-            child: const Text('저장'),
-          ),
-        ],
       ),
     );
   }
@@ -381,11 +437,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     BuildContext context,
     String name,
     String phone,
+    bool isInfoPublic,
   ) async {
     try {
       await _userDataProvider.updateUserInfo({
         'name': name,
         'phone': phone,
+        'is_info_public': isInfoPublic,
       });
 
       if (!context.mounted) return;

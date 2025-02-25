@@ -13,6 +13,7 @@ class UserData {
   final String? office;
   final bool? member;
   final List<String> groups;
+  final bool isInfoPublic;
 
   const UserData({
     required this.id,
@@ -29,6 +30,7 @@ class UserData {
     this.office,
     this.member,
     this.groups = const [],
+    this.isInfoPublic = false,
   });
 
   factory UserData.empty(
@@ -44,6 +46,7 @@ class UserData {
         name: '사용자',
         level: 10,
       ),
+      isInfoPublic: false,
     );
   }
 
@@ -71,6 +74,7 @@ class UserData {
       office: json['office'] as String?,
       member: json['member'] as bool?,
       groups: const [],
+      isInfoPublic: json['is_info_public'] as bool? ?? false,
     );
   }
 
@@ -87,6 +91,7 @@ class UserData {
       'birth_date': birthDate?.toIso8601String(),
       'office': office,
       'member': member,
+      'is_info_public': isInfoPublic,
     };
   }
 
@@ -100,6 +105,7 @@ class UserData {
       'birth_date': birthDate?.toIso8601String(),
       'office': office,
       'member': member,
+      'is_info_public': isInfoPublic,
     };
   }
 
@@ -113,6 +119,7 @@ class UserData {
       'birth_date',
       'office',
       'member',
+      'is_info_public',
     ].contains(field);
   }
 
@@ -133,6 +140,7 @@ class UserData {
     String? office,
     bool? member,
     List<String>? groups,
+    bool? isInfoPublic,
   }) {
     return UserData(
       id: id ?? this.id,
@@ -149,6 +157,7 @@ class UserData {
       office: office ?? this.office,
       member: member ?? this.member,
       groups: groups ?? this.groups,
+      isInfoPublic: isInfoPublic ?? this.isInfoPublic,
     );
   }
 

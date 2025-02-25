@@ -114,9 +114,10 @@ class CustomUserService {
       // 기본 쿼리 설정
       var query = supabase.from('custom_users').select('*, roles (*)');
 
-      // 관리자가 아닌 경우에만 member=true 필터 적용
+      // 관리자가 아닌 경우에만 필터 적용
       if (!currentUserData.canManage) {
-        query = query.eq('member', true);
+        // member=true이고 정보 공개를 허용한 사용자만 조회
+        query = query.eq('member', true).eq('is_info_public', true);
       }
 
       if (searchQuery != null && searchQuery.isNotEmpty) {
@@ -141,6 +142,9 @@ class CustomUserService {
 
   Future<List<UserData>> searchUsers(String? searchQuery) async {
     try {
+      // 현재 사용자 데이터 가져오기
+      final currentUserData = await _userDataProvider.getCurrentUser();
+
       var query = supabase.from('custom_users').select('''
         *,
         roles:role (
@@ -149,6 +153,11 @@ class CustomUserService {
           level
         )
       ''');
+
+      // 관리자가 아닌 경우에만 필터 적용
+      if (!currentUserData.canManage) {
+        query = query.eq('is_info_public', true);
+      }
 
       if (searchQuery != null && searchQuery.isNotEmpty) {
         query = query.or(

@@ -186,7 +186,46 @@ class _MainScreenState extends State<MainScreen> {
             key: _boardKey,
             initialCategoryId: widget.initialCategoryId,
           ),
-          const CreatePostScreen(),
+          if (userData.isInfoPublic && (userData.member ?? false))
+            const CreatePostScreen()
+          else
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.lock_outline,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      !(userData.member ?? false)
+                          ? '교인 인증 후 글쓰기가 가능합니다.'
+                          : '정보 비공개 상태에서는\n글쓰기 기능을 사용할 수 없습니다.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      !(userData.member ?? false)
+                          ? '관리자에게 문의하여\n교인 인증을 받으시기 바랍니다.'
+                          : '설정에서 정보 공개로 변경하시면\n글쓰기 기능을 사용하실 수 있습니다.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           const NotificationScreen(),
           Builder(
             builder: (context) => IconButton(
@@ -384,28 +423,37 @@ class _MainScreenState extends State<MainScreen> {
                       listenable: _userDataProvider,
                       builder: (context, _) {
                         final userData = _userDataProvider.userData;
+                        final isMember = userData?.member ?? false;
+                        final isInfoPublic = userData?.isInfoPublic ?? false;
+
                         return _buildMenuButton(
                           label: '연락처',
                           iconUrl:
                               'https://nfivyduwknskpfhuyzeg.supabase.co/storage/v1/object/public/icons//address.png',
-                          onTap: (userData?.member ?? false)
-                              ? () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const YearbookScreen(),
-                                    ),
-                                  );
-                                }
-                              : () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('교인 인증 후 사용 가능한 기능입니다.'),
-                                      behavior: SnackBarBehavior.floating,
-                                    ),
-                                  );
-                                },
+                          onTap: () {
+                            if (!isMember) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('교인 인증 후 사용 가능한 기능입니다.'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            } else if (!isInfoPublic) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('정보 공개 설정 후 사용 가능한 기능입니다.'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            } else {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const YearbookScreen(),
+                                ),
+                              );
+                            }
+                          },
                         );
                       },
                     ),

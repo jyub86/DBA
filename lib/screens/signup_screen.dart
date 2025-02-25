@@ -27,6 +27,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   late TermsAgreement _termsAgreement;
+  bool _isInfoPublic = true;
 
   @override
   void initState() {
@@ -112,6 +113,52 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   },
                 ),
                 const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withOpacity(0.5),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '정보 공개 여부',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                          Switch(
+                            value: _isInfoPublic,
+                            onChanged: (value) {
+                              setState(() {
+                                _isInfoPublic = value;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '정보 미공개 시 일부 서비스(글 작성 및 주소록 서비스) 사용에 제한을 받을 수 있습니다.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
                 TermsAgreementWidget(
                   agreement: _termsAgreement,
                   onAgreementChanged: (agreement) {
@@ -162,6 +209,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         'active': true,
         'profile_picture':
             widget.profileUrl.isNotEmpty ? widget.profileUrl : null,
+        'is_info_public': _isInfoPublic,
       };
 
       // 1. 먼저 auth_id로 기존 사용자 확인
@@ -191,6 +239,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           'active': true,
           'profile_picture':
               widget.profileUrl.isNotEmpty ? widget.profileUrl : null,
+          'is_info_public': _isInfoPublic,
         };
 
         // 기존 사용자 정보 업데이트

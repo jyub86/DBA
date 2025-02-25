@@ -217,7 +217,35 @@ class _YearbookScreenState extends State<YearbookScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('성도 정보 수정'),
+          title: Row(
+            children: [
+              const Text('성도 정보 수정'),
+              if (!user.isInfoPublic) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color:
+                        Theme.of(context).colorScheme.secondary.withAlpha(26),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '비공개',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .secondary
+                          .withAlpha(179),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -396,12 +424,42 @@ class _YearbookScreenState extends State<YearbookScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    user.name ?? '이름 없음',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        user.name ?? '이름 없음',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (!user.isInfoPublic && isManager) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .secondary
+                                .withAlpha(26),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '비공개',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .secondary
+                                  .withAlpha(179),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   if (user.office != null)
                     Text(
@@ -636,6 +694,7 @@ class _YearbookScreenState extends State<YearbookScreen> {
                             itemBuilder: (context, index) {
                               final user = _filteredUsers[index];
                               final isNonMember = !(user.member ?? true);
+                              final isPrivate = !user.isInfoPublic;
 
                               return ListTile(
                                 leading: Stack(
@@ -704,6 +763,33 @@ class _YearbookScreenState extends State<YearbookScreen> {
                                             color: Theme.of(context)
                                                 .colorScheme
                                                 .error
+                                                .withAlpha(179),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    if (isPrivate && isManager) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .secondary
+                                              .withAlpha(26),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          '비공개',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .secondary
                                                 .withAlpha(179),
                                           ),
                                         ),
