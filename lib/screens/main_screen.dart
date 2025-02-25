@@ -186,46 +186,50 @@ class _MainScreenState extends State<MainScreen> {
             key: _boardKey,
             initialCategoryId: widget.initialCategoryId,
           ),
-          if (userData.isInfoPublic && (userData.member ?? false))
-            const CreatePostScreen()
-          else
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.lock_outline,
-                      size: 48,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      !(userData.member ?? false)
-                          ? '교인 인증 후 글쓰기가 가능합니다.'
-                          : '정보 비공개 상태에서는\n글쓰기 기능을 사용할 수 없습니다.',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+          Builder(
+            builder: (context) {
+              if (userData.isInfoPublic && (userData.member ?? false)) {
+                return const CreatePostScreen();
+              }
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.lock_outline,
+                        size: 48,
+                        color: Theme.of(context).colorScheme.error,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      !(userData.member ?? false)
-                          ? '관리자에게 문의하여\n교인 인증을 받으시기 바랍니다.'
-                          : '설정에서 정보 공개로 변경하시면\n글쓰기 기능을 사용하실 수 있습니다.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      const SizedBox(height: 16),
+                      Text(
+                        !(userData.member ?? false)
+                            ? '교인 인증이 필요한 기능입니다.'
+                            : '정보 비공개 상태에서는\n글쓰기 기능을 사용할 수 없습니다.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      Text(
+                        !(userData.member ?? false)
+                            ? '관리자에게 문의하여\n교인 인증을 받으시기 바랍니다.'
+                            : '설정에서 정보 공개로 변경하시면\n글쓰기 기능을 사용하실 수 있습니다.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
+          ),
           const NotificationScreen(),
           Builder(
             builder: (context) => IconButton(

@@ -37,29 +37,28 @@ class CustomBottomNavigationBar extends StatelessWidget {
             onDestinationSelected: onIndexChanged,
             backgroundColor: Colors.transparent,
             indicatorColor: Theme.of(context).primaryColor.withAlpha(26),
-            destinations: [
-              const NavigationDestination(
+            destinations: const [
+              NavigationDestination(
                 icon: Icon(Icons.home_outlined),
                 selectedIcon: Icon(Icons.home),
                 label: '홈',
               ),
-              const NavigationDestination(
+              NavigationDestination(
                 icon: Icon(Icons.article_outlined),
                 selectedIcon: Icon(Icons.article),
                 label: '게시판',
               ),
-              if (userData.member ?? false)
-                const NavigationDestination(
-                  icon: Icon(Icons.add_box_outlined),
-                  selectedIcon: Icon(Icons.add_box),
-                  label: '글쓰기',
-                ),
-              const NavigationDestination(
+              NavigationDestination(
+                icon: Icon(Icons.add_box_outlined),
+                selectedIcon: Icon(Icons.add_box),
+                label: '글쓰기',
+              ),
+              NavigationDestination(
                 icon: Icon(Icons.notifications_outlined),
                 selectedIcon: Icon(Icons.notifications),
                 label: '알림',
               ),
-              const NavigationDestination(
+              NavigationDestination(
                 icon: Icon(Icons.menu),
                 selectedIcon: Icon(Icons.menu),
                 label: '더보기',
