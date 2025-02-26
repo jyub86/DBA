@@ -40,6 +40,10 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  void _handleAppleLogin() async {
+    await _authService.handleAppleLogin(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -58,27 +62,53 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const Spacer(),
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _handleKakaoLogin,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFE500),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _handleKakaoLogin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFFE500),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Continue with Kakao',
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
-                      child: const Text(
-                        'Continue with Kakao',
-                        style: TextStyle(
-                          color: Colors.black87,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _handleAppleLogin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Continue with Apple',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 32),

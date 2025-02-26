@@ -51,10 +51,8 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.bupyungdongbuchurch.dba</string>
+				<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 			</array>
-			<key>CFBundleURLName</key>
-			<string>auth</string>
 		</dict>
 	</array>
 	<key>FirebaseAppDelegateProxyEnabled</key>
@@ -83,5 +81,15 @@
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>프로필 사진 촬영을 위해 카메라 접근 권한이 필요합니다.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>프로필 사진 선택을 위해 사진 라이브러리 접근 권한이 필요합니다.</string>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 </dict>
 </plist>

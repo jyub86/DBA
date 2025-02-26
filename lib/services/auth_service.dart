@@ -8,6 +8,8 @@ import 'package:dba/services/logger_service.dart';
 import '../screens/signup_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/kakao_login_webview.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'dart:io' show Platform;
 
 // 신규 사용자 정보를 임시 저장하기 위한 클래스
 class _PendingUser {
@@ -333,6 +335,73 @@ class AuthService {
           behavior: SnackBarBehavior.floating,
         ),
       );
+    }
+  }
+
+  /// 애플 로그인 처리
+  Future<void> handleAppleLogin(BuildContext context) async {
+    try {
+      // iOS 플랫폼 체크
+      if (!Platform.isIOS) {
+        throw Exception('애플 로그인은 iOS에서만 사용 가능합니다.');
+      }
+
+      // 애플 로그인 사용 가능 여부 체크
+      final isAvailable = await SignInWithApple.isAvailable();
+      if (!isAvailable) {
+        throw Exception('이 기기에서는 애플 로그인을 사용할 수 없습니다.');
+      }
+
+      // 현재 세션이 있다면 로그아웃
+      final currentSession = Supabase.instance.client.auth.currentSession;
+      if (currentSession != null) {
+        await Supabase.instance.client.auth.signOut();
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+
+      // 상태 초기화
+      dispose();
+
+      // 딥링크 리스너 설정
+      setupDeepLinkListener(context);
+
+      // Apple Sign In 실행
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      if (credential.identityToken == null) {
+        throw Exception('애플 로그인 인증 토큰을 받지 못했습니다.');
+      }
+
+      // Supabase Apple 로그인 실행
+      final response = await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.apple,
+        idToken: credential.identityToken!,
+      );
+
+      if (response.session != null) {
+        await _handleSignedIn(response.session!);
+        if (context.mounted) {
+          await checkAndNavigate(context);
+        }
+      } else {
+        throw Exception('로그인 세션을 생성하지 못했습니다.');
+      }
+    } catch (e, stackTrace) {
+      LoggerService.error('애플 로그인 처리 중 오류 발생', e, stackTrace);
+      if (context.mounted) {
+        String errorMessage = '로그인 처리 중 오류가 발생했습니다.';
+        if (e.toString().contains('canceled')) {
+          errorMessage = '로그인이 취소되었습니다.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
     }
   }
 }

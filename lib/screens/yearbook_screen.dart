@@ -485,7 +485,7 @@ class _YearbookScreenState extends State<YearbookScreen> {
             children: [
               if (user.email != null && user.email!.isNotEmpty) ...[
                 const Text(
-                  '이메일(카카오ID)',
+                  '이메일',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
