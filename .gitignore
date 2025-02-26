@@ -107,6 +107,7 @@ supabase/.temp/
 
 # Script files
 run.sh
+run_build.sh
 !run.sh.example
 
 # Sensitive credentials

@@ -23,11 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _initializeAuth() {
     if (!mounted) return;
-
-    // 상태 초기화 보장
     _authService.dispose();
-
-    // 딥링크 리스너 설정
     _authService.setupDeepLinkListener(context);
   }
 
@@ -35,6 +31,13 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _authService.dispose();
     super.dispose();
+  }
+
+  void _handleKakaoLogin() async {
+    await _authService.handleKakaoLogin(
+      context,
+      kIsWeb ? null : SupabaseConstants.redirectUrl,
+    );
   }
 
   @override
@@ -59,12 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        _authService.handleKakaoLogin(
-                          context,
-                          kIsWeb ? null : SupabaseConstants.redirectUrl,
-                        );
-                      },
+                      onPressed: _handleKakaoLogin,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFFE500),
                         padding: const EdgeInsets.symmetric(vertical: 16),

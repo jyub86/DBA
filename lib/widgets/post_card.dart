@@ -83,19 +83,20 @@ class _PostCardState extends State<PostCard> {
       final userData = _userDataProvider.userData;
       if (userData == null) return;
 
-      await Supabase.instance.client
+      final response = await Supabase.instance.client
           .from('likes')
           .select()
-          .eq('post_id', widget.post.id.toString())
+          .eq('post_id', widget.post.id)
           .eq('user_id', userData.authId)
-          .single();
+          .maybeSingle();
 
       if (mounted) {
         setState(() {
-          _isLiked = true;
+          _isLiked = response != null;
         });
       }
     } catch (e) {
+      LoggerService.error('좋아요 상태 확인 중 에러 발생', e, null);
       if (mounted) {
         setState(() {
           _isLiked = false;
@@ -109,7 +110,7 @@ class _PostCardState extends State<PostCard> {
       final response = await Supabase.instance.client
           .from('likes')
           .select()
-          .eq('post_id', widget.post.id.toString());
+          .eq('post_id', widget.post.id);
 
       if (mounted) {
         setState(() {
@@ -130,7 +131,7 @@ class _PostCardState extends State<PostCard> {
       final response = await Supabase.instance.client
           .from('comments')
           .select()
-          .eq('post_id', widget.post.id.toString());
+          .eq('post_id', widget.post.id);
 
       if (mounted) {
         setState(() {
@@ -156,12 +157,12 @@ class _PostCardState extends State<PostCard> {
         await Supabase.instance.client
             .from('likes')
             .delete()
-            .eq('post_id', widget.post.id.toString())
+            .eq('post_id', widget.post.id)
             .eq('user_id', userData.authId);
       } else {
         // 좋아요 추가
         await Supabase.instance.client.from('likes').insert({
-          'post_id': widget.post.id.toString(),
+          'post_id': widget.post.id,
           'user_id': userData.authId,
         });
       }

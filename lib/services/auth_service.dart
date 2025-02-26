@@ -7,6 +7,7 @@ import '../providers/user_data_provider.dart';
 import 'package:dba/services/logger_service.dart';
 import '../screens/signup_screen.dart';
 import '../screens/login_screen.dart';
+import '../screens/kakao_login_webview.dart';
 
 // 신규 사용자 정보를 임시 저장하기 위한 클래스
 class _PendingUser {
@@ -236,40 +237,102 @@ class AuthService {
 
       // 딥링크 리스너 설정
       setupDeepLinkListener(context);
-      final res = await Supabase.instance.client.auth.signInWithOAuth(
-        OAuthProvider.kakao,
+
+      // OAuth URL 생성
+      final authResponse =
+          await Supabase.instance.client.auth.getOAuthSignInUrl(
+        provider: OAuthProvider.kakao,
         redirectTo: redirectUrl ?? SupabaseConstants.redirectUrl,
-        authScreenLaunchMode: LaunchMode.externalApplication,
         queryParams: {
           'prompt': 'login',
         },
       );
 
-      if (!res) {
-        LoggerService.info('카카오 로그인 실패: OAuth 프로세스가 시작되지 않았습니다.');
+      if (!context.mounted) return;
+
+      // 웹뷰로 로그인 진행
+      final success = await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        isDismissible: false,
+        enableDrag: false,
+        backgroundColor: Colors.transparent,
+        builder: (context) => KakaoLoginWebView(
+          initialUrl: authResponse.url,
+        ),
+      );
+
+      if (success == true) {
+        // 로그인 성공 시 세션 확인 및 다음 단계 진행
+        await Future.delayed(const Duration(seconds: 1));
+        if (!context.mounted) return;
+
+        final session = Supabase.instance.client.auth.currentSession;
+        if (session != null) {
+          await _handleSignedIn(session);
+          if (context.mounted) {
+            await checkAndNavigate(context);
+          }
+        }
+      } else if (success == false) {
+        // 명시적으로 취소된 경우
+        LoggerService.info('카카오 로그인이 취소되었습니다.');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('카카오 로그인을 시작할 수 없습니다. 다시 시도해주세요.')),
+            const SnackBar(content: Text('로그인이 취소되었습니다.')),
           );
         }
       }
+      // success가 null인 경우는 무시 (백버튼 등으로 인한 닫힘)
     } catch (e, stackTrace) {
-      LoggerService.error('카카오 로그인 시작 중 오류 발생', e, stackTrace);
-      _isHandlingDeepLink = false;
+      LoggerService.error('카카오 로그인 처리 중 오류 발생', e, stackTrace);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('로그인을 시작할 수 없습니다.\n잠시 후 다시 시도해주세요.'),
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(
-              label: '다시 시도',
-              onPressed: () {
-                handleKakaoLogin(context, redirectUrl);
-              },
-            ),
-          ),
+          const SnackBar(content: Text('로그인 처리 중 오류가 발생했습니다.')),
         );
       }
+    }
+  }
+
+  /// 계정 삭제 처리
+  Future<void> deleteAccount(BuildContext context) async {
+    try {
+      // 현재 사용자 정보 가져오기
+      final currentUser = Supabase.instance.client.auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('로그인이 필요합니다.');
+      }
+
+      await Supabase.instance.client.rpc(
+        'delete_user_data',
+        params: {'p_user_id': currentUser.id},
+      );
+
+      _userDataProvider.clear();
+      dispose();
+
+      if (!context.mounted) return;
+      await Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const LoginScreen(),
+        ),
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('계정이 성공적으로 삭제되었습니다.')),
+        );
+      }
+    } catch (e) {
+      LoggerService.error('계정 삭제 실패', e, null);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('계정 삭제 중 오류가 발생했습니다. 관리자에게 문의해주세요.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 }
