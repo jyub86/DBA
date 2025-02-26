@@ -1,22 +1,34 @@
-plugins {
-    id "com.android.application"
-    id "kotlin-android"
-    id "com.google.gms.google-services"
-    id "dev.flutter.flutter-gradle-plugin"
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
 }
 
-def flutterRoot = {
-    def properties = new Properties()
-    file("../local.properties").withInputStream { properties.load(it) }
-    def flutterSdkPath = properties.getProperty("flutter.sdk")
-    assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
-    return flutterSdkPath
-}()
+def flutterRoot = localProperties.getProperty('flutter.sdk')
+if (flutterRoot == null) {
+    throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    flutterVersionCode = '1'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    flutterVersionName = '1.0'
+}
+
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
 android {
     namespace "com.bupyungdongbuchurch.dba"
-    compileSdkVersion 34
-    ndkVersion "25.1.8937393"
+    compileSdkVersion flutter.compileSdkVersion
+    ndkVersion flutter.ndkVersion
 
     compileOptions {
         coreLibraryDesugaringEnabled true
@@ -35,31 +47,27 @@ android {
     defaultConfig {
         applicationId "com.bupyungdongbuchurch.dba"
         minSdkVersion 21
-        targetSdkVersion 34
-        versionCode 1
-        versionName "1.0.0"
-        multiDexEnabled true
+        targetSdkVersion flutter.targetSdkVersion
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+        manifestPlaceholders = [
+            'appAuthRedirectScheme': 'com.bupyungdongbuchurch.dba'
+        ]
     }
 
     buildTypes {
         release {
             signingConfig signingConfigs.debug
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
-    }
-
-    lint {
-        disable 'InvalidPackage'
-        checkReleaseBuilds false
     }
 }
 
+flutter {
+    source '../..'
+}
+
 dependencies {
-    implementation platform('com.google.firebase:firebase-bom:32.7.4')
-    implementation 'com.google.firebase:firebase-messaging'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'androidx.multidex:multidex:2.0.1'
-    implementation 'com.google.android.play:core:1.10.3'
+    implementation 'com.google.android.gms:play-services-auth:20.7.0'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 }

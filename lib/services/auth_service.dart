@@ -35,8 +35,10 @@ class AuthService {
 
   void setupDeepLinkListener(BuildContext context) {
     try {
+      dispose(); // 기존 상태 초기화
       _lastContext = context;
-      _authStateSubscription?.cancel();
+      _isHandlingDeepLink = false;
+
       _authStateSubscription =
           Supabase.instance.client.auth.onAuthStateChange.listen(
         (data) async {
@@ -48,10 +50,8 @@ class AuthService {
             return;
           }
 
-          _isHandlingDeepLink = true;
-
           try {
-            // 로그아웃 이벤트는 무시 (signOut 메서드에서 직접 처리)
+            // 로그아웃 이벤트는 무시
             if (event == AuthChangeEvent.signedOut) {
               return;
             }
@@ -215,7 +215,6 @@ class AuthService {
   }
 
   void dispose() {
-    ('AuthService 상태 초기화');
     _authStateSubscription?.cancel();
     _authStateSubscription = null;
     _lastContext = null;
@@ -236,6 +235,7 @@ class AuthService {
 
       // 상태 초기화
       dispose();
+      _isHandlingDeepLink = false; // 명시적으로 상태 리셋
 
       // 딥링크 리스너 설정
       setupDeepLinkListener(context);
@@ -277,15 +277,12 @@ class AuthService {
           }
         }
       } else if (success == false) {
-        // 명시적으로 취소된 경우
-        LoggerService.info('카카오 로그인이 취소되었습니다.');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('로그인이 취소되었습니다.')),
           );
         }
       }
-      // success가 null인 경우는 무시 (백버튼 등으로 인한 닫힘)
     } catch (e, stackTrace) {
       LoggerService.error('카카오 로그인 처리 중 오류 발생', e, stackTrace);
       if (context.mounted) {
@@ -293,6 +290,8 @@ class AuthService {
           const SnackBar(content: Text('로그인 처리 중 오류가 발생했습니다.')),
         );
       }
+    } finally {
+      _isHandlingDeepLink = false; // 항상 상태 리셋
     }
   }
 
@@ -361,6 +360,7 @@ class AuthService {
 
       // 상태 초기화
       dispose();
+      _isHandlingDeepLink = false; // 명시적으로 상태 리셋
 
       // 딥링크 리스너 설정
       setupDeepLinkListener(context);
@@ -402,6 +402,57 @@ class AuthService {
           SnackBar(content: Text(errorMessage)),
         );
       }
+    } finally {
+      _isHandlingDeepLink = false; // 항상 상태 리셋
+    }
+  }
+
+  /// 구글 로그인 처리
+  Future<void> handleGoogleLogin(BuildContext context) async {
+    if (_isHandlingDeepLink) return;
+
+    try {
+      _isHandlingDeepLink = true;
+
+      // 현재 세션이 있다면 로그아웃
+      final currentSession = Supabase.instance.client.auth.currentSession;
+      if (currentSession != null) {
+        await Supabase.instance.client.auth.signOut();
+      }
+
+      // 상태 초기화
+      dispose();
+      _isHandlingDeepLink = false;
+
+      // 딥링크 리스너 설정
+      setupDeepLinkListener(context);
+
+      // Supabase OAuth 로그인 실행
+      final success = await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: SupabaseConstants.redirectUrl,
+        queryParams: {
+          'access_type': 'offline',
+          'prompt': 'consent',
+        },
+      );
+
+      if (!success) {
+        throw Exception('구글 로그인을 시작할 수 없습니다.');
+      }
+    } catch (e, stackTrace) {
+      LoggerService.error('구글 로그인 처리 중 오류 발생', e, stackTrace);
+      if (context.mounted) {
+        String errorMessage = '로그인 처리 중 오류가 발생했습니다.';
+        if (e.toString().contains('canceled') || e.toString().contains('취소')) {
+          errorMessage = '로그인이 취소되었습니다.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
+    } finally {
+      _isHandlingDeepLink = false;
     }
   }
 }

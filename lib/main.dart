@@ -83,7 +83,6 @@ void main() async {
     } catch (e) {
       if (e is TimeoutException) {
         // 타임아웃은 에러가 아닌 정상적인 상황일 수 있음
-        LoggerService.info('세션 복원 타임아웃 - 신규 사용자일 수 있음');
       } else {
         LoggerService.error('세션 복원 중 오류', e, null);
       }
