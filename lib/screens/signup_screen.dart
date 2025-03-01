@@ -207,8 +207,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         'name': _nameController.text,
         'phone': formattedPhone,
         'active': true,
-        'profile_picture':
-            widget.profileUrl.isNotEmpty ? widget.profileUrl : null,
         'is_info_public': _isInfoPublic,
       };
 
@@ -232,13 +230,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
           .maybeSingle();
 
       if (existingUser != null) {
+        // 이미 가입된 사용자가 있는 경우 에러 문구 출력 후 종료
+        if (existingUser['active'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('이미 가입된 사용자입니다.'),
+            ),
+          );
+          return;
+        }
+
         // 업데이트할 데이터에서 unique 제약조건이 있는 필드들만 선택적으로 업데이트
         final updateData = {
           'auth_id': currentUser.id,
           'email': widget.email,
           'active': true,
-          'profile_picture':
-              widget.profileUrl.isNotEmpty ? widget.profileUrl : null,
           'is_info_public': _isInfoPublic,
         };
 
@@ -279,22 +285,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
           await AuthService().checkAndNavigate(context);
         }
       }
-    } catch (e, stackTrace) {
-      LoggerService.error('회원가입 중 오류 발생', e, stackTrace);
+    } catch (e) {
+      LoggerService.error('회원가입 처리 중 오류 발생', e, null);
       if (mounted) {
-        String errorMessage = '회원가입 중 오류가 발생했습니다.';
-        if (e.toString().contains('이미 가입된 사용자')) {
-          errorMessage = '이미 가입된 사용자입니다.';
-        } else if (e.toString().contains('이미 다른 계정과 연결된 사용자')) {
-          errorMessage = '이미 다른 계정과 연결된 사용자입니다.\n관리자에게 문의해주세요.';
-        } else if (e.toString().contains('duplicate key')) {
-          errorMessage = '동일한 정보를 가진 사용자가 이미 존재합니다.';
-        }
-
+        String errorMessage = '회원가입 처리 중 오류가 발생했습니다.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
-            backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
