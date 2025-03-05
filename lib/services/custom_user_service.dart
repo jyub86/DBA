@@ -23,11 +23,10 @@ class CustomUserService {
 
   /// 로그인 시 사용자 정보를 캐시에 저장
   Future<UserData> initializeUserData(String authId) async {
-    final response = await supabase
-        .from('custom_users')
-        .select('*, roles (*)')
-        .eq('auth_id', authId)
-        .single();
+    final response = await supabase.from('custom_users').select('''
+          *,
+          roles (*)
+        ''').eq('auth_id', authId).single();
 
     _cachedCurrentUser = UserData.fromJson(response);
     _lastCacheTime = DateTime.now();
@@ -52,6 +51,13 @@ class CustomUserService {
   /// 사용자 정보 업데이트
   Future<UserData> updateUserInfo(Map<String, dynamic> updates,
       {String? authId}) async {
+    final currentUser = supabase.auth.currentUser;
+    if (currentUser == null) {
+      throw Exception('로그인이 필요합니다.');
+    }
+
+    final targetAuthId = authId ?? currentUser.id;
+
     // 업데이트 가능한 필드만 필터링
     final validUpdates = updates.map((key, value) => MapEntry(key, value))
       ..removeWhere((key, value) => !UserData.isUpdatableField(key));
@@ -60,24 +66,24 @@ class CustomUserService {
       throw Exception('업데이트할 수 있는 필드가 없습니다.');
     }
 
-    final currentUser = await getCurrentUser();
-    final targetAuthId = authId ?? currentUser.authId;
-
     final response = await supabase
         .from('custom_users')
         .update(validUpdates)
         .eq('auth_id', targetAuthId)
-        .select('*, roles (*)')
-        .single();
+        .select('''
+          *,
+          roles (*)
+        ''').single();
 
-    // 캐시 업데이트 (자신의 정보를 업데이트한 경우에만)
-    if (authId == null) {
-      _cachedCurrentUser = UserData.fromJson(response);
+    final updatedUser = UserData.fromJson(response);
+
+    if (targetAuthId == currentUser.id) {
+      _cachedCurrentUser = updatedUser;
       _lastCacheTime = DateTime.now();
       _notifyListeners();
     }
 
-    return UserData.fromJson(response);
+    return updatedUser;
   }
 
   /// 캐시 초기화
@@ -99,10 +105,9 @@ class CustomUserService {
 
   /// 리스너들에게 사용자 정보 변경 알림
   void _notifyListeners() {
-    if (_cachedCurrentUser != null) {
-      for (final listener in _userDataListeners) {
-        listener(_cachedCurrentUser!);
-      }
+    if (_cachedCurrentUser == null) return;
+    for (final listener in _userDataListeners) {
+      listener(_cachedCurrentUser!);
     }
   }
 
@@ -112,7 +117,10 @@ class CustomUserService {
       final currentUserData = await _userDataProvider.getCurrentUser();
 
       // 기본 쿼리 설정
-      var query = supabase.from('custom_users').select('*, roles (*)');
+      var query = supabase.from('custom_users').select('''
+        *,
+        roles (*)
+      ''');
 
       // 관리자가 아닌 경우에만 필터 적용
       if (!currentUserData.canManage) {
@@ -147,11 +155,7 @@ class CustomUserService {
 
       var query = supabase.from('custom_users').select('''
         *,
-        roles:role (
-          code,
-          name,
-          level
-        )
+        roles (*)
       ''');
 
       // 관리자가 아닌 경우에만 필터 적용

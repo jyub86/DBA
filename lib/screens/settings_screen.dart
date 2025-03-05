@@ -1,17 +1,18 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:path/path.dart' as path;
-import 'package:cached_network_image/cached_network_image.dart';
-import '../models/user_model.dart';
-import '../constants/terms_constants.dart';
-import '../widgets/terms_webview.dart';
-import 'banner_settings_screen.dart';
 import '../services/auth_service.dart';
 import '../providers/user_data_provider.dart';
-import 'inquiry_screen.dart';
+import '../constants/terms_constants.dart';
+import '../widgets/terms_webview.dart';
+import '../widgets/add_message_dialog.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:io';
+import 'package:path/path.dart' as path;
 import 'package:dba/services/logger_service.dart';
+import '../utils/phone_formatter.dart';
+import 'banner_settings_screen.dart';
+import 'inquiry_screen.dart';
 import 'group_management_screen.dart';
 import 'my_liked_posts_screen.dart';
 import 'my_commented_posts_screen.dart';
@@ -343,11 +344,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final userData = await _userDataProvider.getCurrentUser();
     bool isInfoPublic = userData.isInfoPublic;
     final screenWidth = MediaQuery.of(context).size.width;
-    final dialogWidth = screenWidth * 0.9; // 화면 너비의 90%
+    final dialogWidth = screenWidth * 0.9;
 
     return showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
+      builder: (profileDialogContext) => StatefulBuilder(
         builder: (context, setState) => Dialog(
           child: SizedBox(
             width: dialogWidth,
@@ -367,13 +368,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 24),
                   TextField(
                     controller: _nameController,
-                    decoration: const InputDecoration(labelText: '이름'),
+                    decoration: const InputDecoration(
+                      labelText: '이름',
+                      hintText: '실명을 입력해주세요',
+                    ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _phoneController,
-                    decoration: const InputDecoration(labelText: '전화번호'),
+                    decoration: const InputDecoration(
+                      labelText: '전화번호',
+                      hintText: '010-1234-5678',
+                    ),
                     keyboardType: TextInputType.phone,
+                    onChanged: (value) {
+                      final formatted = PhoneFormatter.format(value);
+                      if (formatted != value) {
+                        _phoneController.value = TextEditingValue(
+                          text: formatted,
+                          selection:
+                              TextSelection.collapsed(offset: formatted.length),
+                        );
+                      }
+                    },
                   ),
                   const SizedBox(height: 24),
                   Row(
@@ -397,7 +414,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   if (!isInfoPublic) ...[
                     const SizedBox(height: 8),
                     Text(
-                      '정보 비공개로 변경 시, 기존에 작성했던 게시글 및 댓글도 비공개로 변경됩니다. 또한 일부 서비스(게시 글 작성 및 주소록 서비스) 사용에 제한을 받을 수 있습니다.',
+                      '개인 정보 공개를 허용해주세요. 정보 공개 시, 글쓰기 및 주소록 서비스를 사용할 수 있습니다. 정보 비공개로 변경 시, 기존에 작성했던 게시글 및 댓글도 비공개로 변경됩니다. 또한 일부 서비스(게시 글 작성 및 주소록 서비스) 사용에 제한을 받을 수 있습니다.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color:
                                 Theme.of(context).colorScheme.onSurfaceVariant,
@@ -409,17 +426,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       TextButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => Navigator.pop(profileDialogContext),
                         child: const Text('취소'),
                       ),
                       const SizedBox(width: 8),
                       TextButton(
-                        onPressed: () => _updateProfile(
-                          context,
-                          _nameController.text,
-                          _phoneController.text,
-                          isInfoPublic,
-                        ),
+                        onPressed: () {
+                          // 전화번호 형식 검증
+                          if (!PhoneFormatter.isValid(_phoneController.text)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('올바른 전화번호 형식이 아닙니다.'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            return;
+                          }
+
+                          // 이름 검증
+                          final name = _nameController.text.trim();
+                          if (name.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('이름을 입력해주세요.'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            return;
+                          }
+
+                          _updateProfile(
+                            profileDialogContext,
+                            name,
+                            _phoneController.text,
+                            isInfoPublic,
+                          );
+                        },
                         child: const Text('저장'),
                       ),
                     ],
@@ -429,7 +471,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 8),
                   Center(
                     child: TextButton.icon(
-                      onPressed: () => _showDeleteAccountConfirmDialog(context),
+                      onPressed: () async {
+                        // 내 정보 변경 다이얼로그를 먼저 닫음
+                        Navigator.pop(profileDialogContext);
+                        // 계정 삭제 다이얼로그를 표시
+                        await _showDeleteAccountConfirmDialog(context);
+                      },
                       icon: Icon(
                         Icons.delete_forever,
                         color: Theme.of(context).colorScheme.error,
@@ -463,15 +510,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String phone,
     bool isInfoPublic,
   ) async {
+    // 로딩 표시
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
     try {
+      final supabase = Supabase.instance.client;
+      final currentUser = supabase.auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('로그인이 필요합니다.');
+      }
+
+      // 사용자 정보 업데이트
       await _userDataProvider.updateUserInfo({
         'name': name,
         'phone': phone,
         'is_info_public': isInfoPublic,
       });
 
+      // UserDataProvider 초기화
+      await _userDataProvider.initialize(currentUser.id);
+
       if (!context.mounted) return;
-      Navigator.pop(context);
+      Navigator.pop(context); // 로딩 닫기
+      Navigator.pop(context); // 다이얼로그 닫기
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('프로필이 업데이트되었습니다.'),
@@ -481,6 +547,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       LoggerService.error('프로필 업데이트 중 에러 발생', e, null);
       if (!context.mounted) return;
+      Navigator.pop(context); // 로딩 닫기
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('프로필 업데이트 중 오류가 발생했습니다.'),
@@ -533,365 +600,122 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showDeleteAccountConfirmDialog(BuildContext context) async {
+    bool understood = false;
+    bool isLoading = false;
+
     return showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('계정 삭제'),
-        content: const Text(
-          '계정을 삭제하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다. 정말 삭제하시겠습니까?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // 확인 다이얼로그 닫기
-              Navigator.pop(context); // 내 정보 변경 다이얼로그 닫기
-              _deleteAccount(context);
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: const Text('삭제'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _deleteAccount(BuildContext context) async {
-    try {
-      // 로딩 다이얼로그 표시
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('계정 삭제 중...'),
-            ],
-          ),
-        ),
-      );
-
-      // 계정 삭제 처리
-      await AuthService().deleteAccount(context);
-
-      // 로딩 다이얼로그는 AuthService에서 화면 전환 시 자동으로 닫힘
-    } catch (e) {
-      // 오류 발생 시 로딩 다이얼로그 닫기
-      if (context.mounted) {
-        Navigator.pop(context);
-      }
-      LoggerService.error('계정 삭제 중 에러 발생', e, null);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('계정 삭제 중 오류가 발생했습니다.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-}
-
-class AddMessageDialog extends StatefulWidget {
-  final UserData userData;
-
-  const AddMessageDialog({
-    super.key,
-    required this.userData,
-  });
-
-  @override
-  State<AddMessageDialog> createState() => _AddMessageDialogState();
-}
-
-class _AddMessageDialogState extends State<AddMessageDialog> {
-  late final TextEditingController _titleController;
-  late final TextEditingController _messageController;
-  late final TextEditingController _searchController;
-  String _selectedMessageType = 'global';
-  String? _selectedGroupId;
-  String? _selectedUserId;
-  List<Map<String, dynamic>> _groups = [];
-  List<Map<String, dynamic>> _users = [];
-  bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _titleController = TextEditingController();
-    _messageController = TextEditingController();
-    _searchController = TextEditingController();
-    _loadData();
-  }
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _messageController.dispose();
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-    try {
-      // 그룹 목록 로드
-      final groupsResponse = await Supabase.instance.client
-          .from('groups')
-          .select('id, name')
-          .order('name');
-
-      // 사용자 목록 로드
-      final usersResponse = await Supabase.instance.client
-          .from('custom_users')
-          .select('auth_id, name, office')
-          .order('name');
-
-      if (mounted) {
-        setState(() {
-          _groups = List<Map<String, dynamic>>.from(groupsResponse);
-          _users = List<Map<String, dynamic>>.from(usersResponse);
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      LoggerService.error('데이터 로드 중 에러 발생', e, null);
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  Future<void> _handleSubmit() async {
-    final trimmedTitle = _titleController.text.trim();
-    final trimmedMessage = _messageController.text.trim();
-
-    if (trimmedTitle.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('제목을 입력해주세요.')),
-      );
-      return;
-    }
-
-    if (trimmedMessage.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('내용을 입력해주세요.')),
-      );
-      return;
-    }
-
-    if (_selectedMessageType == 'group' && _selectedGroupId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('그룹을 선택해주세요.')),
-      );
-      return;
-    }
-
-    if (_selectedMessageType == 'personal' && _selectedUserId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('수신자를 선택해주세요.')),
-      );
-      return;
-    }
-
-    try {
-      await Supabase.instance.client.from('messages').insert({
-        'title': trimmedTitle,
-        'message': trimmedMessage,
-        'message_type': _selectedMessageType,
-        'sender_id': widget.userData.authId,
-        'receiver_id':
-            _selectedMessageType == 'personal' ? _selectedUserId : null,
-        'group_id': _selectedMessageType == 'group' ? _selectedGroupId : null,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-
-      if (!context.mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('메시지가 추가되었습니다.')),
-      );
-    } catch (e) {
-      LoggerService.error('메시지 추가 중 에러 발생', e, null);
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('메시지 추가 중 오류가 발생했습니다.')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('메시지 추가'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              value: _selectedMessageType,
-              decoration: const InputDecoration(
-                labelText: '메시지 타입',
-              ),
-              items: const [
-                DropdownMenuItem<String>(
-                  value: 'global',
-                  child: Text('전체 알림'),
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => WillPopScope(
+          onWillPop: () async => !isLoading,
+          child: AlertDialog(
+            title: Row(
+              children: [
+                Icon(
+                  Icons.warning,
+                  color: Theme.of(context).colorScheme.error,
                 ),
-                DropdownMenuItem<String>(
-                  value: 'group',
-                  child: Text('그룹 알림'),
-                ),
-                DropdownMenuItem<String>(
-                  value: 'personal',
-                  child: Text('개인 알림'),
-                ),
+                const SizedBox(width: 8),
+                const Text('계정 삭제'),
               ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedMessageType = value!;
-                  _selectedGroupId = null;
-                  _selectedUserId = null;
-                });
-              },
             ),
-            const SizedBox(height: 16),
-            if (_selectedMessageType == 'group' && _groups.isNotEmpty)
-              DropdownButtonFormField<String>(
-                value: _selectedGroupId,
-                decoration: const InputDecoration(
-                  labelText: '그룹 선택',
-                ),
-                items: _groups.map((group) {
-                  return DropdownMenuItem<String>(
-                    value: group['id'].toString(),
-                    child: Text(group['name']),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() => _selectedGroupId = value);
-                },
-              ),
-            if (_selectedMessageType == 'personal')
-              Autocomplete<Map<String, dynamic>>(
-                initialValue: _selectedUserId != null
-                    ? TextEditingValue(
-                        text: _users
-                            .firstWhere(
-                              (user) => user['auth_id'] == _selectedUserId,
-                              orElse: () => {'name': ''},
-                            )['name']
-                            .toString(),
-                      )
-                    : const TextEditingValue(),
-                optionsBuilder: (TextEditingValue textEditingValue) {
-                  if (textEditingValue.text.isEmpty) {
-                    return _users;
-                  }
-                  return _users.where((user) {
-                    final name = user['name']?.toString().toLowerCase() ?? '';
-                    final office =
-                        user['office']?.toString().toLowerCase() ?? '';
-                    final searchQuery = textEditingValue.text.toLowerCase();
-                    return name.contains(searchQuery) ||
-                        office.contains(searchQuery);
-                  });
-                },
-                displayStringForOption: (user) {
-                  final office = user['office']?.toString();
-                  return office != null && office.isNotEmpty
-                      ? '${user['name']} ($office)'
-                      : user['name'].toString();
-                },
-                onSelected: (user) {
-                  setState(() => _selectedUserId = user['auth_id']);
-                },
-                fieldViewBuilder: (context, textEditingController, focusNode,
-                    onFieldSubmitted) {
-                  return TextField(
-                    controller: textEditingController,
-                    focusNode: focusNode,
-                    decoration: const InputDecoration(
-                      labelText: '수신자 검색/선택',
-                      hintText: '이름 또는 직분으로 검색',
-                      prefixIcon: Icon(Icons.search),
-                    ),
-                  );
-                },
-                optionsViewBuilder: (context, onSelected, options) {
-                  return Align(
-                    alignment: Alignment.topLeft,
-                    child: Material(
-                      elevation: 4,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 200),
-                        child: ListView.builder(
-                          padding: EdgeInsets.zero,
-                          shrinkWrap: true,
-                          itemCount: options.length,
-                          itemBuilder: (context, index) {
-                            final user = options.elementAt(index);
-                            final office = user['office']?.toString();
-                            return ListTile(
-                              title: Text(
-                                office != null && office.isNotEmpty
-                                    ? '${user['name']} ($office)'
-                                    : user['name'].toString(),
-                              ),
-                              onTap: () => onSelected(user),
-                            );
-                          },
+            content: isLoading
+                ? const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('계정 삭제 중...'),
+                    ],
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '계정을 삭제하면 다음과 같은 데이터가 영구적으로 삭제되며 복구할 수 없습니다:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      const Text('• 작성한 모든 게시물'),
+                      const Text('• 작성한 모든 댓글'),
+                      const Text('• 좋아요 표시한 게시물'),
+                      const Text('• 프로필 정보 및 설정'),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: understood,
+                            onChanged: (value) {
+                              setState(() {
+                                understood = value ?? false;
+                              });
+                            },
+                          ),
+                          Expanded(
+                            child: Text(
+                              '위 내용을 이해했으며, 계정 삭제에 동의합니다.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+            actions: isLoading
+                ? null
+                : [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('취소'),
                     ),
-                  );
-                },
-              ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: '제목',
-                hintText: '메시지 제목을 입력하세요',
-              ),
-              maxLines: 1,
-              maxLength: 50,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _messageController,
-              decoration: const InputDecoration(
-                labelText: '내용',
-                hintText: '메시지 내용을 입력하세요',
-              ),
-              maxLines: 3,
-              maxLength: 500,
-            ),
-          ],
+                    TextButton(
+                      onPressed: understood
+                          ? () async {
+                              setState(() {
+                                isLoading = true;
+                              });
+
+                              try {
+                                final success =
+                                    await AuthService().deleteAccount(context);
+                                if (!success) {
+                                  throw Exception('계정 삭제에 실패했습니다.');
+                                }
+
+                                // 계정 삭제 성공 시 로그인 화면으로 이동
+                                if (!context.mounted) return;
+                                Navigator.pushNamedAndRemoveUntil(
+                                  context,
+                                  '/login',
+                                  (route) => false,
+                                );
+                              } catch (e) {
+                                LoggerService.error('계정 삭제 중 에러 발생', e, null);
+                                if (!context.mounted) return;
+                                Navigator.pop(dialogContext); // 다이얼로그 닫기
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        '계정 삭제 중 오류가 발생했습니다. 관리자에게 문의해주세요.'),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            }
+                          : null,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.error,
+                      ),
+                      child: const Text('삭제'),
+                    ),
+                  ],
+          ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('취소'),
-        ),
-        if (_isLoading)
-          const CircularProgressIndicator()
-        else
-          TextButton(
-            onPressed: _handleSubmit,
-            child: const Text('추가'),
-          ),
-      ],
     );
   }
 }

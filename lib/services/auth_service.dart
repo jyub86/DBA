@@ -10,22 +10,16 @@ import '../screens/login_screen.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'dart:io' show Platform;
 
-// 신규 사용자 정보를 임시 저장하기 위한 클래스
-class _PendingUser {
-  final String email;
-  _PendingUser({required this.email});
-}
-
 class AuthService {
   static final AuthService _instance = AuthService._internal();
   factory AuthService() => _instance;
 
   final _fcmService = FCMService();
   final _userDataProvider = UserDataProvider.instance;
+  final _client = Supabase.instance.client;
 
   // 딥링크 리스너
   StreamSubscription<AuthState>? _authStateSubscription;
-  _PendingUser? _pendingNewUser;
   BuildContext? _lastContext;
   bool _isHandlingDeepLink = false;
 
@@ -82,29 +76,20 @@ class AuthService {
   Future<void> _handleSignedIn(Session session) async {
     try {
       final user = session.user;
-      // custom_users 테이블에서 사용자 조회
-      final existingUser = await Supabase.instance.client
-          .from('custom_users')
-          .select()
-          .eq('auth_id', user.id)
-          .maybeSingle();
 
-      if (existingUser == null) {
-        // 신규 사용자 정보를 임시 저장
-        _pendingNewUser = _PendingUser(
-          email: user.email ?? '',
+      // 기존 사용자 데이터 초기화
+      await _userDataProvider.initialize(user.id);
+
+      // FCM 초기화는 별도로 처리
+      _initializeFCMLater();
+
+      // 기존 사용자는 바로 메인 화면으로 이동
+      if (_lastContext != null && _lastContext!.mounted) {
+        Navigator.pushNamedAndRemoveUntil(
+          _lastContext!,
+          '/main',
+          (route) => false,
         );
-      } else {
-        // 기존 사용자 데이터 초기화
-        await _userDataProvider.initialize(user.id);
-        _pendingNewUser = null;
-
-        // 사용자 데이터가 초기화된 후에만 FCM 초기화 시도
-        try {
-          await _fcmService.initialize();
-        } catch (e) {
-          LoggerService.error('FCM 초기화 실패 (무시하고 계속 진행)', e, null);
-        }
       }
     } catch (e, stackTrace) {
       LoggerService.error('로그인 처리 중 오류 발생', e, stackTrace);
@@ -126,29 +111,24 @@ class AuthService {
           .maybeSingle();
 
       if (existingUser == null) {
-        if (_pendingNewUser != null) {
-          // 신규 사용자 등록 화면으로 이동
-          if (!context.mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SignUpScreen(
-                email: _pendingNewUser!.email,
-                profileUrl: '',
-              ),
+        // custom_users에 데이터가 없는 경우에만 회원가입 화면으로 이동
+        if (!context.mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SignUpScreen(
+              email: user.email ?? '',
+              profileUrl: '',
+              name: user.userMetadata?['name'] as String?,
             ),
-          );
-        }
+          ),
+        );
       } else {
         // 기존 사용자 데이터 초기화
         await _userDataProvider.initialize(user.id);
 
-        // 사용자 데이터가 초기화된 후에 FCM 초기화 시도
-        try {
-          await _fcmService.initialize();
-        } catch (e) {
-          LoggerService.error('FCM 초기화 실패 (무시하고 계속 진행)', e, null);
-        }
+        // FCM 초기화는 별도로 처리
+        _initializeFCMLater();
 
         // 메인 화면으로 이동
         if (!context.mounted) return;
@@ -167,10 +147,51 @@ class AuthService {
     }
   }
 
+  /// FCM 초기화를 지연 실행
+  void _initializeFCMLater() {
+    Future.delayed(const Duration(seconds: 1), () async {
+      try {
+        await _fcmService.initialize().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            throw TimeoutException('FCM 초기화 시간 초과');
+          },
+        );
+      } catch (e) {
+        LoggerService.error('FCM 초기화 실패 (무시하고 계속 진행)', e, null);
+      }
+    });
+  }
+
   /// 로그아웃을 위한 리스너 설정
   void addAuthStateListener(BuildContext context) {
     dispose(); // 기존 리스너 정리
     setupDeepLinkListener(context);
+  }
+
+  /// 세션 복구 시도
+  Future<void> recoverSession() async {
+    try {
+      final currentSession = _client.auth.currentSession;
+      if (currentSession?.refreshToken != null) {
+        await _client.auth.recoverSession(currentSession!.refreshToken!);
+      }
+    } catch (e) {
+      LoggerService.error('세션 복구 실패', e, null);
+      // 세션 복구 실패 시 자동 로그아웃 처리
+      await _handleSessionRecoveryFailure();
+    }
+  }
+
+  /// 세션 복구 실패 처리
+  Future<void> _handleSessionRecoveryFailure() async {
+    try {
+      await _client.auth.signOut();
+      _userDataProvider.clear();
+      await _fcmService.deleteToken();
+    } catch (e) {
+      LoggerService.error('세션 복구 실패 처리 중 에러 발생', e, null);
+    }
   }
 
   /// 로그아웃 처리
@@ -183,7 +204,7 @@ class AuthService {
       // 2. 모든 상태 및 데이터 정리
       await Future.wait([
         _fcmService.deleteToken(),
-        Supabase.instance.client.auth.signOut(),
+        _client.auth.signOut(),
       ]);
       _userDataProvider.clear();
 
@@ -216,7 +237,6 @@ class AuthService {
     _authStateSubscription = null;
     _lastContext = null;
     _isHandlingDeepLink = false;
-    _pendingNewUser = null;
   }
 
   /// 카카오 로그인 처리
@@ -269,44 +289,31 @@ class AuthService {
   }
 
   /// 계정 삭제 처리
-  Future<void> deleteAccount(BuildContext context) async {
+  Future<bool> deleteAccount(BuildContext context) async {
     try {
       // 현재 사용자 정보 가져오기
-      final currentUser = Supabase.instance.client.auth.currentUser;
+      final currentUser = _client.auth.currentUser;
       if (currentUser == null) {
         throw Exception('로그인이 필요합니다.');
       }
 
-      await Supabase.instance.client.rpc(
-        'delete_user_data',
-        params: {'p_user_id': currentUser.id},
-      );
-
-      _userDataProvider.clear();
+      // 1. 먼저 리스너 비활성화 및 상태 변수 설정
       dispose();
+      _isHandlingDeepLink = true;
 
-      if (!context.mounted) return;
-      await Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const LoginScreen(),
-        ),
-      );
+      // 2. Edge Function 호출하여 계정 삭제
+      await _client.functions
+          .invoke('delete-account', body: {'user_id': currentUser.id});
 
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('계정이 성공적으로 삭제되었습니다.')),
-        );
-      }
+      // 3. 모든 상태 및 데이터 정리
+      _userDataProvider.clear();
+      await _client.auth.signOut();
+
+      return true;
     } catch (e) {
+      _isHandlingDeepLink = false;
       LoggerService.error('계정 삭제 실패', e, null);
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('계정 삭제 중 오류가 발생했습니다. 관리자에게 문의해주세요.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      return false;
     }
   }
 

@@ -152,6 +152,19 @@ class _PostCardState extends State<PostCard> {
       final userData = _userDataProvider.userData;
       if (userData == null) return;
 
+      // 멤버 여부와 정보 공개 여부 확인
+      if (userData.member != true || userData.isInfoPublic != true) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('멤버 인증 및 정보 공개 설정이 필요한 기능입니다.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
       if (_isLiked) {
         // 좋아요 삭제
         await Supabase.instance.client

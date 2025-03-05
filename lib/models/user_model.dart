@@ -13,6 +13,7 @@ class UserData {
   final String? office;
   final bool? member;
   final List<String> groups;
+  final DateTime? createdAt;
   final bool isInfoPublic;
 
   const UserData({
@@ -30,6 +31,7 @@ class UserData {
     this.office,
     this.member,
     this.groups = const [],
+    this.createdAt,
     this.isInfoPublic = false,
   });
 
@@ -46,7 +48,6 @@ class UserData {
         name: '사용자',
         level: 10,
       ),
-      isInfoPublic: false,
     );
   }
 
@@ -58,7 +59,7 @@ class UserData {
           'level': 10,
         };
     return UserData(
-      id: json['id'] as String,
+      id: json['id'] as String? ?? json['auth_id'] as String,
       authId: json['auth_id'] as String,
       email: json['email'] as String?,
       name: json['name'] as String?,
@@ -74,6 +75,9 @@ class UserData {
       office: json['office'] as String?,
       member: json['member'] as bool?,
       groups: const [],
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : null,
       isInfoPublic: json['is_info_public'] as bool? ?? false,
     );
   }
@@ -92,6 +96,7 @@ class UserData {
       'office': office,
       'member': member,
       'is_info_public': isInfoPublic,
+      if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
     };
   }
 
@@ -140,6 +145,7 @@ class UserData {
     String? office,
     bool? member,
     List<String>? groups,
+    DateTime? createdAt,
     bool? isInfoPublic,
   }) {
     return UserData(
@@ -157,6 +163,7 @@ class UserData {
       office: office ?? this.office,
       member: member ?? this.member,
       groups: groups ?? this.groups,
+      createdAt: createdAt ?? this.createdAt,
       isInfoPublic: isInfoPublic ?? this.isInfoPublic,
     );
   }
@@ -202,5 +209,13 @@ class Role {
       name: json['name'] as String,
       level: json['level'] as int,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'code': code,
+      'name': name,
+      'level': level,
+    };
   }
 }

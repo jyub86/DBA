@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:dba/constants/supabase_constants.dart';
 import 'package:dba/constants/firebase_constants.dart';
 import 'package:dba/screens/login_screen.dart';
 import 'package:dba/services/notification_service.dart';
@@ -22,93 +21,93 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   try {
-    WidgetsFlutterBinding.ensureInitialized();
-
-    // Firebase 초기화
-    await Firebase.initializeApp(
-      options: FirebaseConstants.firebaseOptions,
-    );
-
-    // Crashlytics 초기화
-    await CrashlyticsService.init();
-
-    // 백그라운드 메시지 핸들러 등록
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-    // 앱이 종료된 상태에서 알림 클릭으로 시작된 경우 처리
-    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
-    if (initialMessage != null) {
-      // 앱 시작 후 알림 화면으로 이동하기 위한 플래그 설정
-      _shouldNavigateToNotification = true;
-    }
-
-    NotificationService.navigatorKey = GlobalKey<NavigatorState>();
-    await NotificationService().initialize();
-
-    // Supabase 초기화
     await Supabase.initialize(
-      url: SupabaseConstants.projectUrl,
-      anonKey: SupabaseConstants.anonKey,
+      url: const String.fromEnvironment('SUPABASE_URL'),
+      anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY'),
       authOptions: const FlutterAuthClientOptions(
         authFlowType: AuthFlowType.pkce,
         autoRefreshToken: true,
       ),
-      debug: false,
     );
-
-    // 세션 복원 완료를 기다림
-    final completer = Completer<void>();
-    late final StreamSubscription<AuthState> subscription;
-
-    subscription = Supabase.instance.client.auth.onAuthStateChange.listen(
-      (data) {
-        if (data.event == AuthChangeEvent.initialSession) {
-          if (!completer.isCompleted) {
-            completer.complete();
-          }
-        }
-      },
-      onError: (error) {
-        LoggerService.error('인증 상태 변경 에러', error, null);
-        if (!completer.isCompleted) {
-          completer.completeError(error);
-        }
-      },
-    );
-
-    // 최대 3초까지 기다림
-    try {
-      await completer.future.timeout(const Duration(seconds: 3));
-    } catch (e) {
-      if (e is TimeoutException) {
-        // 타임아웃은 에러가 아닌 정상적인 상황일 수 있음
-      } else {
-        LoggerService.error('세션 복원 중 오류', e, null);
-      }
-    } finally {
-      subscription.cancel();
-    }
-
-    // 현재 세션 상태 확인
-    final session = Supabase.instance.client.auth.currentSession;
-
-    // FCM 초기화를 나중에 시도하도록 변경
-    if (session != null) {
-      // FCM 초기화를 비동기로 처리하고 실패해도 앱 실행에 영향을 주지 않도록 함
-      Future.delayed(const Duration(seconds: 2), () async {
-        try {
-          await FCMService().initialize();
-        } catch (e) {
-          LoggerService.error('FCM 초기화 실패 (무시하고 계속 진행)', e, null);
-        }
-      });
-    }
-
-    runApp(const MyApp());
-  } catch (e, stackTrace) {
-    LoggerService.error('초기화 중 오류 발생', e, stackTrace);
+  } catch (e) {
+    LoggerService.error('Supabase 초기화 중 에러 발생', e, null);
+    // 세션 복구 실패 시 로컬 스토리지의 세션 데이터를 초기화
+    await Supabase.instance.client.auth.signOut();
   }
+
+  // Firebase 초기화
+  await Firebase.initializeApp(
+    options: FirebaseConstants.firebaseOptions,
+  );
+
+  // Crashlytics 초기화
+  await CrashlyticsService.init();
+
+  // 백그라운드 메시지 핸들러 등록
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // 앱이 종료된 상태에서 알림 클릭으로 시작된 경우 처리
+  final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  if (initialMessage != null) {
+    // 앱 시작 후 알림 화면으로 이동하기 위한 플래그 설정
+    _shouldNavigateToNotification = true;
+  }
+
+  NotificationService.navigatorKey = GlobalKey<NavigatorState>();
+  await NotificationService().initialize();
+
+  // 세션 복원 완료를 기다림
+  final completer = Completer<void>();
+  late final StreamSubscription<AuthState> subscription;
+
+  subscription = Supabase.instance.client.auth.onAuthStateChange.listen(
+    (data) {
+      if (data.event == AuthChangeEvent.initialSession) {
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      }
+    },
+    onError: (error) {
+      LoggerService.error('인증 상태 변경 에러', error, null);
+      if (!completer.isCompleted) {
+        completer.completeError(error);
+      }
+    },
+  );
+
+  // 최대 3초까지 기다림
+  try {
+    await completer.future.timeout(const Duration(seconds: 3));
+  } catch (e) {
+    if (e is TimeoutException) {
+      // 타임아웃은 에러가 아닌 정상적인 상황일 수 있음
+    } else {
+      LoggerService.error('세션 복원 중 오류', e, null);
+    }
+  } finally {
+    subscription.cancel();
+  }
+
+  // 현재 세션 상태 확인
+  final session = Supabase.instance.client.auth.currentSession;
+
+  // FCM 초기화를 나중에 시도하도록 변경
+  if (session != null) {
+    // FCM 초기화를 비동기로 처리하고 실패해도 앱 실행에 영향을 주지 않도록 함
+    Future.delayed(const Duration(seconds: 2), () async {
+      try {
+        await FCMService().initialize();
+      } catch (e) {
+        LoggerService.error('FCM 초기화 실패 (무시하고 계속 진행)', e, null);
+      }
+    });
+  }
+
+  runApp(const MyApp());
 }
 
 // 앱이 종료된 상태에서 알림 클릭으로 시작된 경우
