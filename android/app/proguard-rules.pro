@@ -15,6 +15,17 @@
 -keep class io.supabase.** { *; }
 -keep class com.google.gson.** { *; }
 
+# Play Core
+-keep class com.google.android.play.core.** { *; }
+-keep class com.google.android.play.core.splitcompat.** { *; }
+-keep class com.google.android.play.core.splitinstall.** { *; }
+-keep class com.google.android.play.core.tasks.** { *; }
+-keep class io.flutter.embedding.engine.deferredcomponents.** { *; }
+-keep class androidx.startup.** { *; }
+
+# Play In-App Update
+-keep class com.google.android.play.core.appupdate.** { *; }
+
 # MESA 로그 제거
 -assumenosideeffects class android.util.Log {
     public static *** d(...);
@@ -43,12 +54,6 @@
 -assumenosideeffects class com.android.org.mesa.** {
     *;
 }
-
-# Play Core
--keep class com.google.android.play.core.** { *; }
--keep class com.google.android.play.core.splitcompat.** { *; }
--keep class com.google.android.play.core.splitinstall.** { *; }
--keep class com.google.android.play.core.tasks.** { *; }
 
 # Keep R8 rules
 -keepattributes *Annotation*

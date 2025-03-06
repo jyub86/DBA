@@ -55,6 +55,8 @@ app.*.map.json
 **/android/local.properties
 **/android/**/GeneratedPluginRegistrant.*
 **/android/app/.cxx/
+key.properties
+app/upload-keystore.jks
 
 # iOS specific
 **/ios/**/*.mode1v3
