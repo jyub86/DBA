@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.114.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import serviceAccount from './service-account.json' assert { type: "json" };
 
 // 서비스 계정 유효성 검사
@@ -341,10 +341,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('알림 전송 중 오류 발생:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { 
-        status: error.message === 'Method not allowed' ? 405 : 400,
+        status: errorMessage === 'Method not allowed' ? 405 : 400,
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*'

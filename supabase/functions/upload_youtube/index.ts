@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.114.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -17,6 +17,16 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
         detectSessionInUrl: false
     }
 });
+
+interface YouTubeItem {
+  snippet: {
+    resourceId: {
+      videoId: string;
+    };
+    title: string;
+    publishedAt: string;
+  };
+}
 
 // YouTube API를 통해 최신 영상 가져오기
 async function getLatestVideos(maxResults = 50) {
@@ -39,7 +49,7 @@ async function getLatestVideos(maxResults = 50) {
         const videosData = await videosResponse.json();
 
         // 3. 필요한 정보만 추출
-        return videosData.items.map(item => ({
+        return videosData.items.map((item: YouTubeItem) => ({
             videoId: item.snippet.resourceId.videoId,
             title: item.snippet.title,
             publishedAt: item.snippet.publishedAt,
@@ -52,12 +62,14 @@ async function getLatestVideos(maxResults = 50) {
     }
 }
 
-const getCategoryID = {
+type CategoryType = "설교" | "찬양" | "예배실황" | "목수교실";
+
+const getCategoryID: Record<CategoryType, string> = {
     "설교": "4",
     "찬양": "5",
     "예배실황": "6",
     "목수교실": "8",
-}
+};
 
 // Supabase에 새로운 영상 추가
 async function uploadNewVideos() {
@@ -88,7 +100,7 @@ async function uploadNewVideos() {
                 continue;
             }
 
-            const categoryID = getCategoryID[category];
+            const categoryID = getCategoryID[category as CategoryType];
 
             // 1. 동일한 제목의 게시물이 있는지 확인
             const { data: existingPosts } = await supabase
@@ -159,8 +171,9 @@ serve(async (req) => {
             }
         );
     } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return new Response(
-            JSON.stringify({ error: error.message }),
+            JSON.stringify({ error: errorMessage }),
             {
                 status: 400,
                 headers: {
