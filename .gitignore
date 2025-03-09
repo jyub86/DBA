@@ -12,6 +12,7 @@
 .swiftpm/
 .cursorrules
 migrate_working_dir/
+test/
 
 # IntelliJ related
 .vscode/
