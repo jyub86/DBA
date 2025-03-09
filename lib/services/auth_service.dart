@@ -319,6 +319,8 @@ class AuthService {
 
   /// 애플 로그인 처리
   Future<void> handleAppleLogin(BuildContext context) async {
+    if (_isHandlingDeepLink) return;
+
     try {
       // iOS 플랫폼 체크
       if (!Platform.isIOS) {
@@ -331,6 +333,8 @@ class AuthService {
         throw Exception('이 기기에서는 애플 로그인을 사용할 수 없습니다.');
       }
 
+      _isHandlingDeepLink = true;
+
       // 현재 세션이 있다면 로그아웃
       final currentSession = Supabase.instance.client.auth.currentSession;
       if (currentSession != null) {
@@ -340,7 +344,7 @@ class AuthService {
 
       // 상태 초기화
       dispose();
-      _isHandlingDeepLink = false; // 명시적으로 상태 리셋
+      _isHandlingDeepLink = false;
 
       // 딥링크 리스너 설정
       setupDeepLinkListener(context);
@@ -363,27 +367,29 @@ class AuthService {
         idToken: credential.identityToken!,
       );
 
-      if (response.session != null) {
-        await _handleSignedIn(response.session!);
-        if (context.mounted) {
-          await checkAndNavigate(context);
-        }
-      } else {
+      if (response.session == null) {
         throw Exception('로그인 세션을 생성하지 못했습니다.');
       }
-    } catch (e, stackTrace) {
-      LoggerService.error('애플 로그인 처리 중 오류 발생', e, stackTrace);
+
+      if (context.mounted) {
+        await checkAndNavigate(context);
+      }
+    } catch (e) {
+      LoggerService.error('애플 로그인 중 오류 발생', e, null);
       if (context.mounted) {
         String errorMessage = '로그인 처리 중 오류가 발생했습니다.';
         if (e.toString().contains('canceled')) {
           errorMessage = '로그인이 취소되었습니다.';
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage)),
+          SnackBar(
+            content: Text(errorMessage),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     } finally {
-      _isHandlingDeepLink = false; // 항상 상태 리셋
+      _isHandlingDeepLink = false;
     }
   }
 

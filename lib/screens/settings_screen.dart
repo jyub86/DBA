@@ -354,148 +354,152 @@ class _SettingsScreenState extends State<SettingsScreen> {
             width: dialogWidth,
             child: Padding(
               padding: const EdgeInsets.all(20.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    '내 정보 변경',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  TextField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: '이름',
-                      hintText: '실명을 입력해주세요',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _phoneController,
-                    decoration: const InputDecoration(
-                      labelText: '전화번호',
-                      hintText: '010-1234-5678',
-                    ),
-                    keyboardType: TextInputType.phone,
-                    onChanged: (value) {
-                      final formatted = PhoneFormatter.format(value);
-                      if (formatted != value) {
-                        _phoneController.value = TextEditingValue(
-                          text: formatted,
-                          selection:
-                              TextSelection.collapsed(offset: formatted.length),
-                        );
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '정보 공개 여부',
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '내 정보 변경',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
-                      Switch(
-                        value: isInfoPublic,
-                        onChanged: (value) {
-                          setState(() {
-                            isInfoPublic = value;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                  if (!isInfoPublic) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      '개인 정보 공개를 허용해주세요. 정보 공개 시, 글쓰기 및 주소록 서비스를 사용할 수 있습니다. 정보 비공개로 변경 시, 기존에 작성했던 게시글 및 댓글도 비공개로 변경됩니다. 또한 일부 서비스(게시 글 작성 및 주소록 서비스) 사용에 제한을 받을 수 있습니다.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
                     ),
-                  ],
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(profileDialogContext),
-                        child: const Text('취소'),
+                    const SizedBox(height: 24),
+                    TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: '이름',
+                        hintText: '실명을 입력해주세요',
                       ),
-                      const SizedBox(width: 8),
-                      TextButton(
-                        onPressed: () {
-                          // 전화번호 형식 검증
-                          if (!PhoneFormatter.isValid(_phoneController.text)) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('올바른 전화번호 형식이 아닙니다.'),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                            return;
-                          }
-
-                          // 이름 검증
-                          final name = _nameController.text.trim();
-                          if (name.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('이름을 입력해주세요.'),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                            return;
-                          }
-
-                          _updateProfile(
-                            profileDialogContext,
-                            name,
-                            _phoneController.text,
-                            isInfoPublic,
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _phoneController,
+                      decoration: const InputDecoration(
+                        labelText: '전화번호',
+                        hintText: '010-1234-5678',
+                      ),
+                      keyboardType: TextInputType.phone,
+                      onChanged: (value) {
+                        final formatted = PhoneFormatter.format(value);
+                        if (formatted != value) {
+                          _phoneController.value = TextEditingValue(
+                            text: formatted,
+                            selection: TextSelection.collapsed(
+                                offset: formatted.length),
                           );
-                        },
-                        child: const Text('저장'),
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '정보 공개 여부',
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                        ),
+                        Switch(
+                          value: isInfoPublic,
+                          onChanged: (value) {
+                            setState(() {
+                              isInfoPublic = value;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    if (!isInfoPublic) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '개인 정보 공개를 허용해주세요. 정보 공개 시, 글쓰기 및 주소록 서비스를 사용할 수 있습니다. 정보 비공개로 변경 시, 기존에 작성했던 게시글 및 댓글도 비공개로 변경됩니다. 또한 일부 서비스(게시 글 작성 및 주소록 서비스) 사용에 제한을 받을 수 있습니다.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  Center(
-                    child: TextButton.icon(
-                      onPressed: () async {
-                        // 내 정보 변경 다이얼로그를 먼저 닫음
-                        Navigator.pop(profileDialogContext);
-                        // 계정 삭제 다이얼로그를 표시
-                        await _showDeleteAccountConfirmDialog(context);
-                      },
-                      icon: Icon(
-                        Icons.delete_forever,
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                      label: Text(
-                        '계정 삭제',
-                        style: TextStyle(
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(profileDialogContext),
+                          child: const Text('취소'),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () {
+                            // 전화번호 형식 검증
+                            if (!PhoneFormatter.isValid(
+                                _phoneController.text)) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('올바른 전화번호 형식이 아닙니다.'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                              return;
+                            }
+
+                            // 이름 검증
+                            final name = _nameController.text.trim();
+                            if (name.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('이름을 입력해주세요.'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                              return;
+                            }
+
+                            _updateProfile(
+                              profileDialogContext,
+                              name,
+                              _phoneController.text,
+                              isInfoPublic,
+                            );
+                          },
+                          child: const Text('저장'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          // 내 정보 변경 다이얼로그를 먼저 닫음
+                          Navigator.pop(profileDialogContext);
+                          // 계정 삭제 다이얼로그를 표시
+                          await _showDeleteAccountConfirmDialog(context);
+                        },
+                        icon: Icon(
+                          Icons.delete_forever,
                           color: Theme.of(context).colorScheme.error,
                         ),
-                      ),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                        label: Text(
+                          '계정 삭제',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

@@ -111,6 +111,12 @@ class BoardScreenState extends State<BoardScreen> {
   Future<void> _loadPosts() async {
     if (_isLoading || !_hasMore || _isDisposed) return;
 
+    final userData = _userDataProvider.userData;
+    if (userData == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -185,7 +191,11 @@ class BoardScreenState extends State<BoardScreen> {
       builder: (context, _) {
         final userData = _userDataProvider.userData;
         if (userData == null) {
-          return const Center(child: CircularProgressIndicator());
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
         }
 
         return Container(
