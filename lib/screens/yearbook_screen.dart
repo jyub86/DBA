@@ -21,6 +21,7 @@ class _YearbookScreenState extends State<YearbookScreen> {
   List<UserData> _filteredUsers = [];
   bool _isLoading = true;
   bool _showOnlyNonMembers = false;
+  bool _showPrivateUsers = false; // 비공개 사용자 표시 여부
   String _sortBy = 'name'; // 정렬 기준
   bool _isAscending = true; // 오름차순/내림차순
 
@@ -137,7 +138,9 @@ class _YearbookScreenState extends State<YearbookScreen> {
 
           // 초기 데이터를 이름순으로 정렬
           _users.sort((a, b) => (a.name ?? '').compareTo(b.name ?? ''));
-          _filteredUsers = _users;
+
+          // 초기 필터링 적용
+          _filterUsers('');
           _isLoading = false;
         });
       }
@@ -158,6 +161,11 @@ class _YearbookScreenState extends State<YearbookScreen> {
   void _filterUsers(String query) {
     setState(() {
       List<UserData> tempUsers = _users;
+
+      // 비공개 사용자 필터링
+      if (!_showPrivateUsers) {
+        tempUsers = tempUsers.where((user) => user.isInfoPublic).toList();
+      }
 
       if (_showOnlyNonMembers) {
         tempUsers = tempUsers.where((user) => !(user.member ?? true)).toList();
@@ -618,20 +626,46 @@ class _YearbookScreenState extends State<YearbookScreen> {
 
               if (!isManager) return const SizedBox.shrink();
 
-              return IconButton(
-                icon: Icon(
-                  _showOnlyNonMembers ? Icons.person_off : Icons.person,
-                  color: _showOnlyNonMembers
-                      ? Theme.of(context).colorScheme.error
-                      : null,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _showOnlyNonMembers = !_showOnlyNonMembers;
-                    _filterUsers(_searchController.text);
-                  });
-                },
-                tooltip: _showOnlyNonMembers ? '전체 보기' : '비멤버만 보기',
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      _showPrivateUsers
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                      color: _showPrivateUsers
+                          ? Theme.of(context).colorScheme.secondary
+                          : null,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _showPrivateUsers = !_showPrivateUsers;
+                        _filterUsers(_searchController.text);
+                      });
+                    },
+                    tooltip: _showPrivateUsers ? '공개 정보만 보기' : '비공개 정보 포함',
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      _showOnlyNonMembers ? Icons.person_off : Icons.person,
+                      color: _showOnlyNonMembers
+                          ? Theme.of(context).colorScheme.error
+                          : null,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _showOnlyNonMembers = !_showOnlyNonMembers;
+                        // 비멤버 표시 선택 시 자동으로 비공개 사용자도 표시
+                        if (_showOnlyNonMembers) {
+                          _showPrivateUsers = true;
+                        }
+                        _filterUsers(_searchController.text);
+                      });
+                    },
+                    tooltip: _showOnlyNonMembers ? '전체 보기' : '비멤버만 보기',
+                  ),
+                ],
               );
             },
           ),
@@ -657,24 +691,43 @@ class _YearbookScreenState extends State<YearbookScreen> {
               onChanged: _filterUsers,
             ),
           ),
-          if (_showOnlyNonMembers)
+          if (_showOnlyNonMembers || _showPrivateUsers)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Theme.of(context).colorScheme.error,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '비멤버만 표시 중',
-                    style: TextStyle(
+                  if (_showOnlyNonMembers) ...[
+                    Icon(
+                      Icons.info_outline,
                       color: Theme.of(context).colorScheme.error,
-                      fontSize: 14,
+                      size: 16,
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '비멤버만 표시 중',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                  if (_showOnlyNonMembers && _showPrivateUsers)
+                    const Text(' • '),
+                  if (_showPrivateUsers) ...[
+                    Icon(
+                      Icons.visibility,
+                      color: Theme.of(context).colorScheme.secondary,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '비공개 정보 포함',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.secondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
