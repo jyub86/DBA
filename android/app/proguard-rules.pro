@@ -1,11 +1,11 @@
-# Flutter wrapper
+# Flutter Wrapper
 -keep class io.flutter.app.** { *; }
 -keep class io.flutter.plugin.**  { *; }
 -keep class io.flutter.util.**  { *; }
 -keep class io.flutter.view.**  { *; }
 -keep class io.flutter.**  { *; }
 -keep class io.flutter.plugins.**  { *; }
--keep class io.flutter.plugin.editing.** { *; }
+-keep class io.flutter.embedding.** { *; }
 
 # Firebase
 -keep class com.google.firebase.** { *; }
@@ -15,47 +15,79 @@
 -keep class io.supabase.** { *; }
 -keep class com.google.gson.** { *; }
 
-# Play Core
--keep class com.google.android.play.core.** { *; }
--keep class com.google.android.play.core.splitcompat.** { *; }
--keep class com.google.android.play.core.splitinstall.** { *; }
--keep class com.google.android.play.core.tasks.** { *; }
--keep class io.flutter.embedding.engine.deferredcomponents.** { *; }
--keep class androidx.startup.** { *; }
+# Application specific classes
+-keep class com.bupyungdongbuchurch.dba.** { *; }
 
-# Play In-App Update
--keep class com.google.android.play.core.appupdate.** { *; }
+# Keep native methods
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
 
-# MESA 로그 제거
+# Keep Kotlin classes
+-keep class kotlin.** { *; }
+-keep class kotlinx.** { *; }
+
+# Keep Annotations
+-keepattributes *Annotation*
+-keepattributes SourceFile,LineNumberTable
+-keepattributes Signature
+-keepattributes Exceptions
+-keepattributes InnerClasses
+-keepattributes EnclosingMethod
+
+# Keep all classes that might be used in XML layouts
+-keep public class * extends android.view.View
+-keep public class * extends android.app.Activity
+-keep public class * extends android.app.Application
+-keep public class * extends android.app.Service
+-keep public class * extends android.content.BroadcastReceiver
+-keep public class * extends android.content.ContentProvider
+-keep public class * extends android.app.backup.BackupAgentHelper
+-keep public class * extends android.preference.Preference
+
+# Keep all public and protected methods that could be used by Java reflection
+-keepclassmembernames class * {
+    public protected <methods>;
+}
+
+# Keep Parcelable classes
+-keep class * implements android.os.Parcelable {
+    public static final android.os.Parcelable$Creator *;
+}
+
+# Keep Serializable classes
+-keepnames class * implements java.io.Serializable
+-keepclassmembers class * implements java.io.Serializable {
+    static final long serialVersionUID;
+    private static final java.io.ObjectStreamField[] serialPersistentFields;
+    !static !transient <fields>;
+    private void writeObject(java.io.ObjectOutputStream);
+    private void readObject(java.io.ObjectInputStream);
+    java.lang.Object writeReplace();
+    java.lang.Object readResolve();
+}
+
+# Keep R8 specific rules
+-keepattributes *Annotation*
+-keepattributes SourceFile,LineNumberTable
+-keepattributes Signature
+-keepattributes Exceptions
+
+# Remove MESA logs
 -assumenosideeffects class android.util.Log {
     public static *** d(...);
     public static *** v(...);
-    public static *** i(...);
-    public static *** w(...);
-    public static *** e(...);
-    public static *** println(...);
-    public static *** wtf(...);
 }
 
-# MESA 클래스 로그 제거
--assumenosideeffects class * {
-    void debug(...);
-    void verbose(...);
-    void info(...);
-    void trace(...);
-    void warn(...);
-    void error(...);
+# Keep app-specific ProGuard rules
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
 }
 
-# MESA 특정 클래스 로그 제거
--assumenosideeffects class org.mesa.** {
-    *;
-}
--assumenosideeffects class com.android.org.mesa.** {
-    *;
-}
-
-# Keep R8 rules
--keepattributes *Annotation*
--keepattributes SourceFile,LineNumberTable
--keep public class * extends java.lang.Exception 
+# Keep all classes in com.google.android.play.core package
+-keep class com.google.android.play.core.** { *; }
+-keep interface com.google.android.play.core.** { *; }
+-keep class * implements com.google.android.play.core.tasks.OnCompleteListener { *; }
+-keepclassmembers class * {
+    @com.google.android.play.core.tasks.OnCompleteListener *;
+} 
