@@ -1,7 +1,7 @@
 // SUPABASE EDGEFUNCTION이 아님
-// PDF를 이미지로 변환하고 좌우로 나누는 함수
-const PDF_PATH = "";
+// 부평동부교회 홈페이지에서 PDF파일을 다운 받고, PDF를 이미지로 변환하고 좌우로 나누는 함수
 const OUTPUT_DIR = "build/temp";
+const CHURCH_WEBSITE_URL = "https://xn--9d0by7j11iba736zkqd.com/board/%EC%A3%BC%EB%B3%B4/1002/";
 
 import { ensureDir } from "https://deno.land/std@0.191.0/fs/ensure_dir.ts";
 import { join } from "https://deno.land/std@0.191.0/path/mod.ts";
@@ -48,6 +48,145 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
     detectSessionInUrl: false
   }
 });
+
+/**
+ * 교회 웹사이트에서 최신 주보 PDF URL을 가져오는 함수
+ * @returns PDF URL과 제목
+ */
+async function fetchLatestBulletinPdf(): Promise<{ pdfUrl: string; title: string }> {
+  try {
+    console.log(`교회 웹사이트에서 최신 주보 정보를 가져오는 중... (${CHURCH_WEBSITE_URL})`);
+    
+    // 웹사이트 HTML 가져오기
+    const response = await fetch(CHURCH_WEBSITE_URL);
+    if (!response.ok) {
+      throw new Error(`웹사이트 접근 실패: ${response.status} ${response.statusText}`);
+    }
+    
+    const html = await response.text();
+    
+    // 최신 주보 게시물 링크 찾기
+    const latestPostRegex = /<a[^>]*href="([^"]*\/article\/교회소식\/[^"]*)"[^>]*>\s*(\d{4}년\s*\d{1,2}월\s*\d{1,2}일\s*교회소식)/i;
+    const latestPostMatch = html.match(latestPostRegex);
+    
+    if (!latestPostMatch || !latestPostMatch[1]) {
+      throw new Error("웹사이트에서 최신 주보 게시물을 찾을 수 없습니다.");
+    }
+    
+    // 게시물 URL 추출 및 절대 경로로 변환
+    let postUrl = latestPostMatch[1];
+    // '#none' 제거
+    postUrl = postUrl.replace(/#none$/, '');
+    
+    if (postUrl.startsWith('//')) {
+      postUrl = 'https:' + postUrl;
+    } else if (!postUrl.startsWith('http')) {
+      // 도메인 추출
+      const domainMatch = CHURCH_WEBSITE_URL.match(/^(https?:\/\/[^\/]+)/);
+      const domain = domainMatch ? domainMatch[1] : 'https://xn--9d0by7j11iba736zkqd.com';
+      postUrl = domain + (postUrl.startsWith('/') ? '' : '/') + postUrl;
+    }
+    
+    console.log(`최신 주보 게시물 URL: ${postUrl}`);
+    
+    // 게시물 페이지 가져오기
+    const postResponse = await fetch(postUrl);
+    if (!postResponse.ok) {
+      throw new Error(`게시물 페이지 접근 실패: ${postResponse.status} ${postResponse.statusText}`);
+    }
+    
+    const postHtml = await postResponse.text();
+    
+    // 디버깅: HTML 일부 출력
+    const htmlPreview = postHtml.substring(0, 1000) + "...";
+    console.log("게시물 HTML 미리보기:", htmlPreview);
+    
+    // PDF 파일 링크 찾기 (다양한 패턴 시도)
+    let pdfUrl = "";
+    
+    // 패턴 1: 일반적인 href 속성의 PDF 링크
+    const pdfLinkRegex1 = /href="([^"]+\.pdf)"/i;
+    const pdfLinkMatch1 = postHtml.match(pdfLinkRegex1);
+    
+    // 패턴 2: 첨부파일 영역에서 PDF 링크 찾기
+    const pdfLinkRegex2 = /첨부파일[^<]*<[^>]*href="([^"]+\.pdf)/i;
+    const pdfLinkMatch2 = postHtml.match(pdfLinkRegex2);
+    
+    // 패턴 3: 다운로드 링크 찾기
+    const pdfLinkRegex3 = /download[^<]*<[^>]*href="([^"]+\.pdf)/i;
+    const pdfLinkMatch3 = postHtml.match(pdfLinkRegex3);
+    
+    if (pdfLinkMatch1 && pdfLinkMatch1[1]) {
+      pdfUrl = pdfLinkMatch1[1];
+      console.log("패턴 1로 PDF 링크 찾음");
+    } else if (pdfLinkMatch2 && pdfLinkMatch2[1]) {
+      pdfUrl = pdfLinkMatch2[1];
+      console.log("패턴 2로 PDF 링크 찾음");
+    } else if (pdfLinkMatch3 && pdfLinkMatch3[1]) {
+      pdfUrl = pdfLinkMatch3[1];
+      console.log("패턴 3로 PDF 링크 찾음");
+    } else {
+      // 직접 URL 구성 시도
+      // 게시물 URL에서 ID 추출
+      const postIdMatch = postUrl.match(/\/(\d+)\/$/);
+      if (postIdMatch && postIdMatch[1]) {
+        const postId = postIdMatch[1];
+        const year = new Date().getFullYear();
+        const month = (new Date().getMonth() + 1).toString().padStart(2, '0');
+        const day = new Date().getDate().toString().padStart(2, '0');
+        
+        // 추정된 PDF 파일명 생성
+        pdfUrl = `https://xn--9d0by7j11iba736zkqd.com/web/upload/NNEditor/20${year.toString().slice(-2)}/${month}/${year}년(61-11호) ${month}월 ${day}일.pdf`;
+        console.log("패턴 매칭 실패, 추정된 PDF URL 사용");
+      } else {
+        throw new Error("게시물에서 PDF 링크를 찾을 수 없습니다.");
+      }
+    }
+    
+    // '#none' 제거
+    pdfUrl = pdfUrl.replace(/#none$/, '');
+    
+    // PDF URL 절대 경로로 변환
+    if (pdfUrl.startsWith('//')) {
+      pdfUrl = 'https:' + pdfUrl;
+    } else if (!pdfUrl.startsWith('http')) {
+      // 도메인 추출
+      const domainMatch = CHURCH_WEBSITE_URL.match(/^(https?:\/\/[^\/]+)/);
+      const domain = domainMatch ? domainMatch[1] : 'https://xn--9d0by7j11iba736zkqd.com';
+      pdfUrl = domain + (pdfUrl.startsWith('/') ? '' : '/') + pdfUrl;
+    }
+    
+    // 제목 추출 (예: "2025년 3월 16일 교회소식")
+    const titleText = latestPostMatch[2] || "";
+    
+    // 제목에서 날짜 부분 추출하여 YY/MM/DD 형식으로 변환
+    let title = "";
+    const dateRegex = /(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/;
+    const dateMatch = titleText.match(dateRegex);
+    
+    if (dateMatch) {
+      const year = dateMatch[1].slice(-2); // 4자리 연도에서 뒤의 2자리만 사용
+      const month = dateMatch[2].padStart(2, '0');
+      const day = dateMatch[3].padStart(2, '0');
+      title = `${year}/${month}/${day} 주보`;
+    } else {
+      // 날짜 형식이 맞지 않으면 현재 날짜 사용
+      const now = new Date();
+      const year = now.getFullYear().toString().slice(-2);
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+      title = `${year}/${month}/${day} 주보`;
+    }
+    
+    console.log(`최신 주보 정보 찾음: ${title}`);
+    console.log(`PDF URL: ${pdfUrl}`);
+    
+    return { pdfUrl, title };
+  } catch (error) {
+    console.error("주보 정보 가져오기 실패:", error);
+    throw error;
+  }
+}
 
 /**
  * PDF를 이미지로 변환하고 좌우로 나누는 함수
@@ -121,14 +260,7 @@ async function pdfToSplitImages(pdfPath: string, outputDir: string, targetHeight
         const errorMessage = new TextDecoder().decode(identifyOutput.stderr);
         throw new Error(`이미지 크기 정보를 가져오는 데 실패했습니다: ${errorMessage}`);
       }
-      
-      const dimensionsText = new TextDecoder().decode(identifyOutput.stdout).trim();
-      const [width, height] = dimensionsText.split(" ").map(Number);
-      
-      // 비율에 맞게 이미지 크기 조정
-      const scale = targetHeight / height;
-      const scaledWidth = Math.floor(width * scale);
-      
+
       // 이미지 크기 조정 및 좌우 분할
       // 왼쪽 이미지 생성
       const leftImagePath = join(outputDir, `page_${pageNumber}_left.png`);
@@ -371,9 +503,40 @@ if (!import.meta.main) {
     try {
       // 요청 본문 파싱
       const requestData = await req.json();
-      const { pdfUrl, title } = requestData;
+      const { pdfUrl, title, useWebsite } = requestData;
       
-      if (!pdfUrl) {
+      let finalPdfUrl = pdfUrl;
+      let finalTitle = title;
+      
+      // 웹사이트에서 PDF 가져오기 옵션이 활성화된 경우
+      if (useWebsite === true || !finalPdfUrl) {
+        try {
+          console.log("교회 웹사이트에서 최신 주보 정보를 가져옵니다.");
+          const websiteData = await fetchLatestBulletinPdf();
+          finalPdfUrl = websiteData.pdfUrl;
+          
+          // 제목이 제공되지 않은 경우에만 웹사이트에서 가져온 제목 사용
+          if (!finalTitle) {
+            finalTitle = websiteData.title;
+          }
+        } catch (error) {
+          return new Response(
+            JSON.stringify({ 
+              error: '교회 웹사이트에서 주보 정보를 가져오는 데 실패했습니다.',
+              details: error instanceof Error ? error.message : '알 수 없는 오류'
+            }),
+            {
+              status: 400,
+              headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+              }
+            }
+          );
+        }
+      }
+      
+      if (!finalPdfUrl) {
         return new Response(
           JSON.stringify({ error: 'PDF URL이 필요합니다.' }),
           {
@@ -387,7 +550,7 @@ if (!import.meta.main) {
       }
       
       // PDF 파일 다운로드
-      const pdfResponse = await fetch(pdfUrl);
+      const pdfResponse = await fetch(finalPdfUrl);
       if (!pdfResponse.ok) {
         return new Response(
           JSON.stringify({ error: 'PDF 파일을 다운로드할 수 없습니다.' }),
@@ -410,16 +573,17 @@ if (!import.meta.main) {
       const pdfData = await pdfResponse.arrayBuffer();
       await Deno.writeFile(pdfPath, new Uint8Array(pdfData));
       
-      // 현재 날짜를 YY/MM/DD 형식으로 포맷팅
-      const now = new Date();
-      const year = now.getFullYear().toString().slice(-2);
-      const month = (now.getMonth() + 1).toString().padStart(2, '0');
-      const day = now.getDate().toString().padStart(2, '0');
-      const formattedDate = `${year}/${month}/${day}`;
+      // 제목이 제공되지 않은 경우 현재 날짜 사용
+      if (!finalTitle) {
+        const now = new Date();
+        const year = now.getFullYear().toString().slice(-2);
+        const month = (now.getMonth() + 1).toString().padStart(2, '0');
+        const day = now.getDate().toString().padStart(2, '0');
+        finalTitle = `${year}/${month}/${day} 주보`;
+      }
       
       // PDF 처리 및 업로드
-      const postTitle = title || `${formattedDate} 주보`;
-      const result = await processPdfAndUpload(pdfPath, outputDir, postTitle);
+      const result = await processPdfAndUpload(pdfPath, outputDir, finalTitle);
       
       // 임시 파일 정리
       try {
@@ -461,22 +625,206 @@ if (!import.meta.main) {
 // 로컬 테스트용 코드 (HTTP 서버가 실행되지 않을 때만 실행)
 if (import.meta.main) {
   console.log("로컬 테스트 모드로 실행 중...");
-  console.log(`PDF 경로: ${PDF_PATH}`);
-  console.log(`출력 디렉토리: ${OUTPUT_DIR}`);
   
   try {
-    // 현재 날짜를 YY/MM/DD 형식으로 포맷팅
-    const now = new Date();
-    const year = now.getFullYear().toString().slice(-2);
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const day = now.getDate().toString().padStart(2, '0');
-    const formattedDate = `${year}/${month}/${day}`;
+    // 교회 웹사이트에서 최신 주보 게시물 찾기
+    console.log(`교회 웹사이트에서 최신 주보 정보를 가져오는 중... (${CHURCH_WEBSITE_URL})`);
     
-    const title = `${formattedDate} 주보`;
+    // 웹사이트 HTML 가져오기
+    const response = await fetch(CHURCH_WEBSITE_URL);
+    if (!response.ok) {
+      throw new Error(`웹사이트 접근 실패: ${response.status} ${response.statusText}`);
+    }
+    
+    const html = await response.text();
+    
+    // 최신 주보 게시물 링크 찾기
+    const latestPostRegex = /<a[^>]*href="([^"]*\/article\/교회소식\/[^"]*)"[^>]*>\s*(\d{4}년\s*\d{1,2}월\s*\d{1,2}일\s*교회소식)/i;
+    const latestPostMatch = html.match(latestPostRegex);
+    
+    if (!latestPostMatch || !latestPostMatch[1]) {
+      throw new Error("웹사이트에서 최신 주보 게시물을 찾을 수 없습니다.");
+    }
+    
+    // 게시물 URL 추출 및 절대 경로로 변환
+    let postUrl = latestPostMatch[1];
+    // '#none' 제거
+    postUrl = postUrl.replace(/#none$/, '');
+    
+    if (postUrl.startsWith('//')) {
+      postUrl = 'https:' + postUrl;
+    } else if (!postUrl.startsWith('http')) {
+      // 도메인 추출
+      const domainMatch = CHURCH_WEBSITE_URL.match(/^(https?:\/\/[^\/]+)/);
+      const domain = domainMatch ? domainMatch[1] : 'https://xn--9d0by7j11iba736zkqd.com';
+      postUrl = domain + (postUrl.startsWith('/') ? '' : '/') + postUrl;
+    }
+    
+    console.log(`최신 주보 게시물 URL: ${postUrl}`);
+    
+    // 게시물 페이지 가져오기
+    console.log("게시물 페이지 가져오는 중...");
+    const postResponse = await fetch(postUrl);
+    if (!postResponse.ok) {
+      throw new Error(`게시물 페이지 접근 실패: ${postResponse.status} ${postResponse.statusText}`);
+    }
+    
+    const postHtml = await postResponse.text();
+    
+    // 다운로드 링크 찾기 (JavaScript 함수 호출 패턴)
+    console.log("다운로드 링크 찾는 중...");
+    const downloadRegex = /BOARD_READ\.file_download\('([^']+)'/i;
+    const downloadMatch = postHtml.match(downloadRegex);
+    
+    let downloadPath = "";
+    if (downloadMatch && downloadMatch[1]) {
+      downloadPath = downloadMatch[1];
+      console.log(`다운로드 경로 찾음: ${downloadPath}`);
+    } else {
+      console.log("다운로드 경로를 찾을 수 없습니다.");
+      throw new Error("게시물에서 다운로드 경로를 찾을 수 없습니다.");
+    }
+    
+    // 도메인 추출
+    const domainMatch = postUrl.match(/^(https?:\/\/[^\/]+)/);
+    const domain = domainMatch ? domainMatch[1] : 'https://xn--9d0by7j11iba736zkqd.com';
+    
+    // 다운로드 URL 구성
+    const downloadUrl = domain + downloadPath;
+    console.log(`최종 다운로드 URL: ${downloadUrl}`);
+    
+    // 제목 추출 (게시물 제목에서)
+    let title = "";
+    if (latestPostMatch && latestPostMatch[2]) {
+      const titleText = latestPostMatch[2];
+      console.log(`게시물 제목: ${titleText}`);
+      
+      // 날짜 추출 (예: "2025년 3월 16일 교회소식")
+      const dateRegex = /(\d{4})년.*?(\d{1,2})월.*?(\d{1,2})일/;
+      const dateMatch = titleText.match(dateRegex);
+      
+      if (dateMatch) {
+        const year = dateMatch[1].slice(-2); // 4자리 연도에서 뒤의 2자리만 사용
+        const month = dateMatch[2].padStart(2, '0');
+        const day = dateMatch[3].padStart(2, '0');
+        title = `${year}/${month}/${day} 주보`;
+        console.log(`게시물 제목에서 날짜 추출: ${title}`);
+      } else {
+        // 파일명에서 날짜 추출 시도
+        const filenameMatch = downloadPath.match(/filename=([^&]+)/);
+        if (filenameMatch && filenameMatch[1]) {
+          const filename = decodeURIComponent(filenameMatch[1]);
+          console.log(`파일명: ${filename}`);
+          
+          // 날짜 추출 (예: "2025년(61-11호) 3월 16일.pdf")
+          const fileDateRegex = /(\d{4})년.*?(\d{1,2})월.*?(\d{1,2})일/;
+          const fileDateMatch = filename.match(fileDateRegex);
+          
+          if (fileDateMatch) {
+            const year = fileDateMatch[1].slice(-2);
+            const month = fileDateMatch[2].padStart(2, '0');
+            const day = fileDateMatch[3].padStart(2, '0');
+            title = `${year}/${month}/${day} 주보`;
+            console.log(`파일명에서 날짜 추출: ${title}`);
+          } else {
+            // 숫자 추출 시도
+            const numbers = filename.match(/\d+/g);
+            if (numbers && numbers.length >= 3) {
+              // 첫 번째 숫자가 4자리면 연도로 간주
+              let yearIndex = 0;
+              let monthIndex = 1;
+              let dayIndex = 2;
+              
+              // 첫 번째 숫자가 4자리가 아니면 다른 패턴 시도
+              if (numbers[0].length !== 4) {
+                // 다른 숫자 중 4자리 숫자 찾기
+                for (let i = 0; i < numbers.length; i++) {
+                  if (numbers[i].length === 4) {
+                    yearIndex = i;
+                    monthIndex = (i + 1) % numbers.length;
+                    dayIndex = (i + 2) % numbers.length;
+                    break;
+                  }
+                }
+              }
+              
+              const year = numbers[yearIndex].slice(-2);
+              const month = parseInt(numbers[monthIndex]) <= 12 ? 
+                            numbers[monthIndex].padStart(2, '0') : 
+                            numbers[dayIndex].padStart(2, '0');
+              const day = parseInt(numbers[monthIndex]) <= 12 ? 
+                          numbers[dayIndex].padStart(2, '0') : 
+                          numbers[monthIndex].padStart(2, '0');
+              
+              title = `${year}/${month}/${day} 주보`;
+              console.log(`숫자 추출로 제목 설정: ${title}`);
+            } else {
+              // 현재 날짜 사용
+              const now = new Date();
+              const year = now.getFullYear().toString().slice(-2);
+              const month = (now.getMonth() + 1).toString().padStart(2, '0');
+              const day = now.getDate().toString().padStart(2, '0');
+              title = `${year}/${month}/${day} 주보`;
+              console.log(`날짜 추출 실패, 현재 날짜로 제목 설정: ${title}`);
+            }
+          }
+        } else {
+          // 현재 날짜 사용
+          const now = new Date();
+          const year = now.getFullYear().toString().slice(-2);
+          const month = (now.getMonth() + 1).toString().padStart(2, '0');
+          const day = now.getDate().toString().padStart(2, '0');
+          title = `${year}/${month}/${day} 주보`;
+          console.log(`파일명 추출 실패, 현재 날짜로 제목 설정: ${title}`);
+        }
+      }
+    } else {
+      // 현재 날짜 사용
+      const now = new Date();
+      const year = now.getFullYear().toString().slice(-2);
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+      title = `${year}/${month}/${day} 주보`;
+      console.log(`게시물 제목 추출 실패, 현재 날짜로 제목 설정: ${title}`);
+    }
+    
+    // PDF 파일 다운로드 시도
+    console.log(`PDF 다운로드 시도 중...`);
+    const pdfResponse = await fetch(downloadUrl);
+    
+    console.log(`PDF 다운로드 응답 상태: ${pdfResponse.status} ${pdfResponse.statusText}`);
+    console.log(`응답 Content-Type: ${pdfResponse.headers.get('Content-Type')}`);
+    
+    if (!pdfResponse.ok) {
+      throw new Error(`PDF 다운로드 실패: ${pdfResponse.status} ${pdfResponse.statusText}`);
+    }
+    
+    // 응답 크기 확인
+    const contentLength = pdfResponse.headers.get('Content-Length');
+    console.log(`응답 크기: ${contentLength ? parseInt(contentLength) / 1024 : '알 수 없음'} KB`);
+    
+    // PDF 파일 저장
+    const pdfData = await pdfResponse.arrayBuffer();
+    console.log(`다운로드된 데이터 크기: ${pdfData.byteLength / 1024} KB`);
+    
+    // 임시 디렉토리 생성
+    await ensureDir(OUTPUT_DIR);
+    const tempPdfPath = join(OUTPUT_DIR, "bulletin.pdf");
+    
+    await Deno.writeFile(tempPdfPath, new Uint8Array(pdfData));
+    console.log(`PDF 파일 저장 완료: ${tempPdfPath}`);
+    
+    // 파일 크기 확인
+    const fileInfo = await Deno.stat(tempPdfPath);
+    console.log(`저장된 파일 크기: ${fileInfo.size / 1024} KB`);
+    
+    // PDF 처리 및 업로드
+    console.log(`PDF 처리 및 Supabase 업로드 시작...`);
     console.log(`게시물 제목: ${title}`);
     
-    const result = await processPdfAndUpload(PDF_PATH, OUTPUT_DIR, title);
+    const result = await processPdfAndUpload(tempPdfPath, OUTPUT_DIR, title);
     console.log("처리 결과:", result);
+    
     console.log("작업이 완료되었습니다. 프로그램을 종료합니다.");
   } catch (error) {
     console.error("실행 중 오류 발생:", error);
