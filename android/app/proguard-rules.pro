@@ -90,4 +90,55 @@
 -keep class * implements com.google.android.play.core.tasks.OnCompleteListener { *; }
 -keepclassmembers class * {
     @com.google.android.play.core.tasks.OnCompleteListener *;
-} 
+}
+
+# 메모리 관련 최적화
+-optimizations !code/simplification/arithmetic,!code/simplification/cast,!field/*,!class/merging/*
+-optimizationpasses 5
+-allowaccessmodification
+
+# 안정성 관련 설정
+-dontusemixedcaseclassnames
+-dontskipnonpubliclibraryclasses
+-verbose
+
+# 메모리 누수 방지
+-keepclassmembers class * {
+    void <init>(android.content.Context);
+}
+
+# Flutter 플러그인 관련 설정
+-keep class com.dexterous.** { *; }
+-keep class io.flutter.plugins.firebase.** { *; }
+-keep class io.flutter.plugins.webviewflutter.** { *; }
+-keep class io.flutter.plugins.pathprovider.** { *; }
+-keep class io.flutter.plugins.sharedpreferences.** { *; }
+-keep class io.flutter.plugins.urllauncher.** { *; }
+-keep class io.flutter.plugins.imagepicker.** { *; }
+
+# 웹뷰 관련 설정
+-keepclassmembers class * extends android.webkit.WebViewClient {
+    public void *(android.webkit.WebView, java.lang.String, android.graphics.Bitmap);
+    public boolean *(android.webkit.WebView, java.lang.String);
+}
+-keepclassmembers class * extends android.webkit.WebViewClient {
+    public void *(android.webkit.WebView, java.lang.String);
+}
+
+# 메모리 최적화를 위한 추가 설정
+-repackageclasses ''
+-flattenpackagehierarchy ''
+-keepattributes Exceptions,InnerClasses,Signature,Deprecated,SourceFile,LineNumberTable,*Annotation*,EnclosingMethod
+
+# 누락된 Play Core 클래스에 대한 경고 무시
+-dontwarn com.google.android.play.core.splitcompat.SplitCompatApplication
+-dontwarn com.google.android.play.core.splitinstall.SplitInstallException
+-dontwarn com.google.android.play.core.splitinstall.SplitInstallManager
+-dontwarn com.google.android.play.core.splitinstall.SplitInstallManagerFactory
+-dontwarn com.google.android.play.core.splitinstall.SplitInstallRequest$Builder
+-dontwarn com.google.android.play.core.splitinstall.SplitInstallRequest
+-dontwarn com.google.android.play.core.splitinstall.SplitInstallSessionState
+-dontwarn com.google.android.play.core.splitinstall.SplitInstallStateUpdatedListener
+-dontwarn com.google.android.play.core.tasks.OnFailureListener
+-dontwarn com.google.android.play.core.tasks.OnSuccessListener
+-dontwarn com.google.android.play.core.tasks.Task 

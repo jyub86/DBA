@@ -14,7 +14,13 @@ class AuthService {
   static final AuthService _instance = AuthService._internal();
   factory AuthService() => _instance;
 
-  final _fcmService = FCMService();
+  // FCM 서비스를 지연 초기화
+  FCMService? _fcmServiceInstance;
+  FCMService get _fcmService {
+    _fcmServiceInstance ??= FCMService();
+    return _fcmServiceInstance!;
+  }
+
   final _userDataProvider = UserDataProvider.instance;
   final _client = Supabase.instance.client;
 
@@ -188,7 +194,19 @@ class AuthService {
     try {
       await _client.auth.signOut();
       _userDataProvider.clear();
-      await _fcmService.deleteToken();
+
+      // FCM 토큰 삭제 시도 - 실패해도 계속 진행
+      try {
+        await _fcmService.deleteToken().timeout(
+          const Duration(seconds: 3),
+          onTimeout: () {
+            LoggerService.warning('세션 복구 실패 처리 중 FCM 토큰 삭제 시간 초과');
+            return;
+          },
+        );
+      } catch (e) {
+        LoggerService.error('세션 복구 실패 처리 중 FCM 토큰 삭제 실패', e, null);
+      }
     } catch (e) {
       LoggerService.error('세션 복구 실패 처리 중 에러 발생', e, null);
     }
@@ -202,10 +220,22 @@ class AuthService {
       _isHandlingDeepLink = true; // 추가 이벤트 처리 방지
 
       // 2. 모든 상태 및 데이터 정리
-      await Future.wait([
-        _fcmService.deleteToken(),
-        _client.auth.signOut(),
-      ]);
+      try {
+        // FCM 토큰 삭제 시도 - 실패해도 계속 진행
+        await _fcmService.deleteToken().timeout(
+          const Duration(seconds: 3),
+          onTimeout: () {
+            LoggerService.warning('FCM 토큰 삭제 시간 초과 (무시하고 계속 진행)');
+            return;
+          },
+        );
+      } catch (e) {
+        // FCM 토큰 삭제 실패는 무시하고 계속 진행
+        LoggerService.error('FCM 토큰 삭제 실패 (무시하고 계속 진행)', e, null);
+      }
+
+      // Supabase 로그아웃 처리
+      await _client.auth.signOut();
       _userDataProvider.clear();
 
       // 3. UI 업데이트

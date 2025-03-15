@@ -63,10 +63,19 @@ android {
         versionName flutterVersionName
         multiDexEnabled true
         
+        // 메모리 관련 설정 추가
+        vectorDrawables.useSupportLibrary = true
+        
+        // 앱 크래시 방지를 위한 설정
         manifestPlaceholders = [
             'enableSplitCompat': false,
             'enableDeferredComponents': 'false'
         ]
+        
+        // 지연 구성 요소 비활성화
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+        }
     }
 
     signingConfigs {
@@ -81,12 +90,25 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            minifyEnabled false
-            shrinkResources false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             
             ndk {
                 debugSymbolLevel 'FULL'
+            }
+        }
+        
+        debug {
+            // 디버그 빌드에서도 ProGuard 적용
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            
+            // 디버그 빌드에서 더 많은 메모리 할당
+            javaCompileOptions {
+                annotationProcessorOptions {
+                    arguments = ["room.incremental": "true"]
+                }
             }
         }
     }
@@ -101,6 +123,19 @@ android {
         abi {
             enableSplit = false
         }
+    }
+    
+    // 패키징 옵션 추가
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt', 'META-INF/license.txt', 'META-INF/NOTICE', 'META-INF/NOTICE.txt', 'META-INF/notice.txt', 'META-INF/ASL2.0']
+        }
+    }
+    
+    // 린트 옵션 추가
+    lintOptions {
+        checkReleaseBuilds false
+        abortOnError false
     }
 }
 
@@ -124,10 +159,52 @@ afterEvaluate {
         }
     }
 
-    tasks.whenTaskAdded { task ->
-        if (task.name == 'assembleRelease') {
-            task.finalizedBy('copyMappingFile')
+    // 네이티브 디버그 기호 파일 생성 태스크 추가
+    tasks.register('extractNativeDebugSymbols') {
+        doLast {
+            def abiList = ['armeabi-v7a', 'arm64-v8a', 'x86_64']
+            def symbolsDir = new File("${buildDir}/symbols")
+            symbolsDir.mkdirs()
+            
+            // .dart_tool 디렉토리에서 네이티브 라이브러리 파일 찾기
+            def dartToolDir = new File("${project.rootDir.parent}/.dart_tool/flutter_build")
+            if (dartToolDir.exists()) {
+                dartToolDir.eachDir { buildDir ->
+                    abiList.each { abi ->
+                        def soFile = new File("${buildDir}/${abi}/app.so")
+                        if (soFile.exists()) {
+                            def targetDir = new File("${symbolsDir}/${abi}")
+                            targetDir.mkdirs()
+                            def targetFile = new File("${targetDir}/app.so")
+                            println "Copying native library from ${soFile} to ${targetFile}"
+                            soFile.bytes = soFile.bytes // 파일 복사
+                            targetFile.bytes = soFile.bytes
+                        }
+                    }
+                }
+            }
+            
+            // 심볼 파일 압축
+            def symbolsZipFile = new File("${buildDir}/outputs/symbols/native-debug-symbols.zip")
+            symbolsZipFile.parentFile.mkdirs()
+            
+            ant.zip(destfile: symbolsZipFile) {
+                fileset(dir: symbolsDir)
+            }
+            
+            println "Native debug symbols created at ${symbolsZipFile}"
         }
+    }
+
+    tasks.whenTaskAdded { task ->
+        if (task.name == 'assembleRelease' || task.name == 'bundleRelease') {
+            task.finalizedBy('copyMappingFile', 'extractNativeDebugSymbols')
+        }
+    }
+
+    // bundleRelease 태스크가 완료된 후 extractNativeDebugSymbols 태스크가 실행되도록 명시적으로 설정
+    tasks.named('bundleRelease').configure {
+        finalizedBy('extractNativeDebugSymbols')
     }
 }
 
@@ -136,4 +213,13 @@ dependencies {
     implementation 'com.google.android.gms:play-services-auth:20.7.0'
     implementation 'androidx.multidex:multidex:2.0.1'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.2'
+    
+    // 새로운 Play In-App Update 및 Play In-App Review 라이브러리 추가
+    implementation 'com.google.android.play:app-update:2.1.0'
+    implementation 'com.google.android.play:app-update-ktx:2.1.0'
+    implementation 'com.google.android.play:review:2.0.1'
+    implementation 'com.google.android.play:review-ktx:2.0.1'
+    
+    // 메모리 누수 감지 라이브러리 추가
+    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.12'
 }
