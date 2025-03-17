@@ -3,7 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../providers/user_data_provider.dart';
 import '../constants/terms_constants.dart';
-import '../widgets/terms_webview.dart';
 import '../widgets/add_message_dialog.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -11,11 +10,6 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:dba/services/logger_service.dart';
 import '../utils/phone_formatter.dart';
-import 'banner_settings_screen.dart';
-import 'inquiry_screen.dart';
-import 'group_management_screen.dart';
-import 'my_liked_posts_screen.dart';
-import 'my_commented_posts_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -77,7 +71,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
 
     try {
       final userData = await _userDataProvider.getCurrentUser();
@@ -241,21 +237,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ListTile(
                       leading: const Icon(Icons.favorite),
                       title: const Text('좋아요'),
-                      onTap: () => Navigator.push(
+                      onTap: () => Navigator.pushNamed(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => const MyLikedPostsScreen(),
-                        ),
+                        '/my-liked-posts',
                       ),
                     ),
                     ListTile(
                       leading: const Icon(Icons.comment),
                       title: const Text('댓글'),
-                      onTap: () => Navigator.push(
+                      onTap: () => Navigator.pushNamed(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => const MyCommentedPostsScreen(),
-                        ),
+                        '/my-commented-posts',
                       ),
                     ),
                     if (userData.canManage) const Divider(),
@@ -265,12 +257,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: const Text('배너 설정'),
                         subtitle: const Text('관리자 모드'),
                         onTap: () {
-                          Navigator.push(
+                          Navigator.pushNamed(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const BannerSettingsScreen(),
-                            ),
+                            '/banner-settings',
                           );
                         },
                       ),
@@ -287,12 +276,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: const Text('그룹 관리'),
                         subtitle: const Text('관리자 모드'),
                         onTap: () {
-                          Navigator.push(
+                          Navigator.pushNamed(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const GroupManagementScreen(),
-                            ),
+                            '/group-management',
                           );
                         },
                       ),
@@ -301,11 +287,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       leading: const Icon(Icons.help_outline),
                       title: const Text('문의사항'),
                       onTap: () {
-                        Navigator.push(
+                        Navigator.pushNamed(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => const InquiryScreen(),
-                          ),
+                          '/inquiry',
                         );
                       },
                     ),
@@ -394,33 +378,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       },
                     ),
                     const SizedBox(height: 24),
-                    Row(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            '정보 공개 여부',
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
+                        Text(
+                          '정보 공개 여부',
+                          style: Theme.of(context).textTheme.titleSmall,
                         ),
-                        Switch(
-                          value: isInfoPublic,
-                          onChanged: (value) {
-                            setState(() {
-                              isInfoPublic = value;
-                            });
-                          },
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  isInfoPublic ? '공개' : '비공개',
+                                  style: TextStyle(
+                                    color: isInfoPublic
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Switch(
+                                  value: isInfoPublic,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      isInfoPublic = value;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ],
                     ),
                     if (!isInfoPublic) ...[
                       const SizedBox(height: 8),
-                      Text(
-                        '개인 정보 공개를 허용해주세요. 정보 공개 시, 글쓰기 및 주소록 서비스를 사용할 수 있습니다. 정보 비공개로 변경 시, 기존에 작성했던 게시글 및 댓글도 비공개로 변경됩니다. 또한 일부 서비스(게시 글 작성 및 주소록 서비스) 사용에 제한을 받을 수 있습니다.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                            ),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '개인 정보 공개를 허용해주세요. 정보 공개 시, 글쓰기 및 주소록 서비스를 사용할 수 있습니다. 정보 비공개로 변경 시, 기존에 작성했던 게시글 및 댓글도 비공개로 변경됩니다. 또한 일부 서비스(게시 글 작성 및 주소록 서비스) 사용에 제한을 받을 수 있습니다.',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                        ),
                       ),
                     ],
                     const SizedBox(height: 24),
@@ -582,24 +597,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showTermsDialog(BuildContext context) async {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const TermsWebView(
-          assetPath: TermsConstants.termsOfServicePath,
-          title: '이용약관',
-        ),
-      ),
+    Navigator.of(context).pushNamed(
+      '/terms-webview',
+      arguments: {
+        'assetPath': TermsConstants.termsOfServicePath,
+        'title': '이용약관',
+      },
     );
   }
 
   Future<void> _showPrivacyDialog(BuildContext context) async {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const TermsWebView(
-          assetPath: TermsConstants.privacyPolicyPath,
-          title: '개인정보 처리방침',
-        ),
-      ),
+    Navigator.of(context).pushNamed(
+      '/terms-webview',
+      arguments: {
+        'assetPath': TermsConstants.privacyPolicyPath,
+        'title': '개인정보 처리방침',
+      },
     );
   }
 

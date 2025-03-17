@@ -215,15 +215,17 @@ class _CommentsSheetState extends State<CommentsSheet> {
             .update({'active': !isActive}).eq('id', comment['id']);
 
         // 로컬 상태 업데이트
-        setState(() {
-          final index = _comments.indexWhere((c) => c['id'] == comment['id']);
-          if (index != -1) {
-            _comments[index] = {
-              ..._comments[index],
-              'active': !isActive,
-            };
-          }
-        });
+        if (mounted) {
+          setState(() {
+            final index = _comments.indexWhere((c) => c['id'] == comment['id']);
+            if (index != -1) {
+              _comments[index] = {
+                ..._comments[index],
+                'active': !isActive,
+              };
+            }
+          });
+        }
 
         widget.onCommentUpdated?.call();
 

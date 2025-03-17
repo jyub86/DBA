@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/post_model.dart';
-import '../screens/create_post_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../widgets/comments_sheet.dart';
 import '../utils/date_formatter.dart';
 import '../screens/board_screen.dart';
 import '../providers/user_data_provider.dart';
 import '../models/user_model.dart';
-import '../screens/youtube_player_screen.dart';
 import 'package:dba/services/logger_service.dart';
 
 class PostCard extends StatefulWidget {
@@ -197,23 +194,17 @@ class _PostCardState extends State<PostCard> {
   }
 
   void _showComments() {
-    Navigator.push(
+    Navigator.pushNamed(
       context,
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: const Text('댓글'),
-          ),
-          body: CommentsSheet(
-            postId: widget.post.id,
-            onCommentUpdated: () {
-              if (mounted) {
-                _getCommentsCount();
-              }
-            },
-          ),
-        ),
-      ),
+      '/comments',
+      arguments: {
+        'postId': widget.post.id,
+        'onCommentUpdated': () {
+          if (mounted) {
+            _getCommentsCount();
+          }
+        },
+      },
     );
   }
 
@@ -485,13 +476,10 @@ class _PostCardState extends State<PostCard> {
 
     return InkWell(
       onTap: () {
-        Navigator.push(
+        Navigator.pushNamed(
           context,
-          MaterialPageRoute(
-            builder: (context) => YoutubePlayerScreen(
-              videoId: videoId,
-            ),
-          ),
+          '/youtube-player',
+          arguments: {'videoId': videoId},
         );
       },
       child: Container(
@@ -763,13 +751,10 @@ class _PostCardState extends State<PostCard> {
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 onTap: () {
                   Navigator.pop(bottomSheetContext);
-                  Navigator.push(
+                  Navigator.pushNamed(
                     parentContext,
-                    MaterialPageRoute(
-                      builder: (context) => CreatePostScreen(
-                        editPost: widget.post,
-                      ),
-                    ),
+                    '/create-post',
+                    arguments: {'editPost': widget.post},
                   );
                 },
               ),

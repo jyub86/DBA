@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/logger_service.dart';
 import '../models/group_model.dart';
-import 'group_member_screen.dart';
 
 class GroupManagementScreen extends StatefulWidget {
   const GroupManagementScreen({super.key});
@@ -181,11 +180,10 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                     ],
                   ),
                   onTap: () {
-                    Navigator.push(
+                    Navigator.pushNamed(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => GroupMemberScreen(group: group),
-                      ),
+                      '/group-member',
+                      arguments: {'group': group},
                     );
                   },
                 );

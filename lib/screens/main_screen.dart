@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/banner_model.dart';
@@ -11,16 +12,15 @@ import '../widgets/bottom_navigation_bar.dart';
 import 'board_screen.dart';
 import 'create_post_screen.dart';
 import 'notification_screen.dart';
-import 'yearbook_screen.dart';
 import '../providers/user_data_provider.dart';
 import '../constants/supabase_constants.dart';
 import '../services/logger_service.dart';
-import 'church_calendar_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final int initialIndex;
   final int? initialCategoryId;
 
+  // 일반 생성자 사용
   const MainScreen({
     super.key,
     this.initialIndex = 0,
@@ -28,10 +28,10 @@ class MainScreen extends StatefulWidget {
   });
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  State<MainScreen> createState() => MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class MainScreenState extends State<MainScreen> {
   final GlobalKey<BoardScreenState> _boardKey = GlobalKey();
   final _userDataProvider = UserDataProvider.instance;
   int _currentIndex = 0;
@@ -41,12 +41,76 @@ class _MainScreenState extends State<MainScreen> {
   Timer? _bannerTimer;
   final PageController _bannerController = PageController();
   int _currentBannerIndex = 0;
+  DateTime? _lastBackPressTime;
+
+  // 배경 이미지 로딩 상태 추적
+  bool _isBackgroundLoaded = false;
+
+  // 데이터가 이미 로드되었는지 추적하는 전역 변수
+  static bool _globalDataLoaded = false;
+  static List<CategoryModel> _globalCategories = [];
+  static List<BannerModel> _globalBanners = [];
+  static bool _globalBackgroundLoaded = false;
+
+  // 인덱스 업데이트 메서드 (public으로 변경)
+  void updateIndex(int index, int? categoryId) {
+    if (mounted) {
+      setState(() {
+        _currentIndex = index;
+      });
+
+      // 게시판 탭으로 이동하고 카테고리가 지정된 경우
+      if (index == 1 && categoryId != null && _boardKey.currentState != null) {
+        _boardKey.currentState?.updateCategory(categoryId);
+      }
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
-    _loadData();
+
+    // 배경 이미지를 미리 캐싱하고 로딩 상태 관리 개선
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 배경 이미지가 이미 로드된 경우 상태 업데이트
+      if (_globalBackgroundLoaded) {
+        if (mounted) {
+          setState(() {
+            _isBackgroundLoaded = true;
+          });
+        }
+      } else {
+        // 배경 이미지가 아직 로드되지 않은 경우에만 캐싱
+        precacheImage(
+          const CachedNetworkImageProvider(SupabaseConstants.backgroundImage),
+          context,
+        ).then((_) {
+          if (mounted) {
+            setState(() {
+              // 배경 이미지가 캐시되었음을 표시
+              _isBackgroundLoaded = true;
+              _globalBackgroundLoaded = true;
+            });
+          }
+        });
+      }
+
+      // 데이터가 이미 로드된 경우 전역 데이터 사용
+      if (_globalDataLoaded) {
+        if (mounted) {
+          setState(() {
+            categories = _globalCategories;
+            banners = _globalBanners;
+            isLoading = false;
+          });
+        }
+      } else {
+        // 데이터가 아직 로드되지 않은 경우에만 로드
+        _loadData();
+      }
+    });
+
     _startBannerTimer();
   }
 
@@ -72,6 +136,9 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _loadData() async {
+    // 이미 데이터가 로드된 경우 다시 로드하지 않음
+    if (_globalDataLoaded && !isLoading) return;
+
     try {
       if (!mounted) return;
 
@@ -89,18 +156,22 @@ class _MainScreenState extends State<MainScreen> {
 
       if (!mounted) return;
 
-      setState(() {
-        banners = bannersData
-            .map((data) => BannerModel(
-                  id: data['id'],
-                  imageUrl: data['image_url'],
-                  link: data['link'],
-                  title: data['title'],
-                ))
-            .toList();
+      // 전역 변수에 데이터 저장
+      _globalCategories = categoriesData;
+      _globalBanners = bannersData
+          .map((data) => BannerModel(
+                id: data['id'],
+                imageUrl: data['image_url'],
+                link: data['link'],
+                title: data['title'],
+              ))
+          .toList();
 
-        categories = categoriesData;
+      setState(() {
+        banners = _globalBanners;
+        categories = _globalCategories;
         isLoading = false;
+        _globalDataLoaded = true; // 데이터 로드 완료 표시
       });
 
       if (banners.isNotEmpty) {
@@ -177,7 +248,9 @@ class _MainScreenState extends State<MainScreen> {
       builder: (context, _) {
         final userData = _userDataProvider.userData;
         if (userData == null) {
-          return const Center(child: CircularProgressIndicator());
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
         final List<Widget> screens = [
@@ -241,30 +314,51 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ];
 
-        return Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: CachedNetworkImageProvider(
-                SupabaseConstants.backgroundImage,
-              ),
-              fit: BoxFit.cover,
-            ),
+        // 배경 이미지와 콘텐츠를 함께 로드하여 깜빡임 방지
+        final Widget content = Container(
+          decoration: BoxDecoration(
+            image: _isBackgroundLoaded
+                ? const DecorationImage(
+                    image: CachedNetworkImageProvider(
+                      SupabaseConstants.backgroundImage,
+                    ),
+                    fit: BoxFit.cover,
+                  )
+                : null,
+            color: _isBackgroundLoaded ? null : Colors.white,
           ),
           child: Scaffold(
             backgroundColor: Colors.transparent,
             body: SafeArea(
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : IndexedStack(
-                      index: _currentIndex,
-                      children: screens,
-                    ),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : IndexedStack(
+                        key: const ValueKey('main_content'),
+                        index: _currentIndex,
+                        children: screens,
+                      ),
+              ),
             ),
             endDrawer: const SettingsScreen(),
             bottomNavigationBar: CustomBottomNavigationBar(
               currentIndex: _currentIndex,
               onIndexChanged: _handleNavigationTap,
             ),
+          ),
+        );
+
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, dynamic result) {
+            if (!didPop) {
+              _handlePopInvoked();
+            }
+          },
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: content,
           ),
         );
       },
@@ -450,11 +544,9 @@ class _MainScreenState extends State<MainScreen> {
                                 ),
                               );
                             } else {
-                              Navigator.push(
+                              Navigator.pushNamed(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (context) => const YearbookScreen(),
-                                ),
+                                '/yearbook',
                               );
                             }
                           },
@@ -470,12 +562,9 @@ class _MainScreenState extends State<MainScreen> {
                             iconUrl:
                                 'https://nfivyduwknskpfhuyzeg.supabase.co/storage/v1/object/public/icons/calendar.png',
                             onTap: () {
-                              Navigator.push(
+                              Navigator.pushNamed(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const ChurchCalendarScreen(),
-                                ),
+                                '/church-calendar',
                               );
                             });
                       },
@@ -524,9 +613,55 @@ class _MainScreenState extends State<MainScreen> {
       Scaffold.of(context).openEndDrawer();
       return;
     }
-    setState(() => _currentIndex = index);
+    if (mounted) {
+      setState(() => _currentIndex = index);
+    }
     if (index == 1) {
       _boardKey.currentState?.updateCategory(0);
+    }
+  }
+
+  // 뒤로가기 버튼 처리 함수
+  Future<void> _handlePopInvoked() async {
+    // 현재 홈 화면이 아닌 경우, 홈 화면으로 이동
+    if (_currentIndex != 0) {
+      if (mounted) {
+        setState(() => _currentIndex = 0);
+      }
+      return; // 앱 종료 방지
+    }
+
+    // 홈 화면에서의 뒤로가기: 종료 확인 다이얼로그 표시
+    final now = DateTime.now();
+
+    // 2초 이내에 두 번 뒤로가기 버튼을 누른 경우 앱 종료
+    if (_lastBackPressTime != null &&
+        now.difference(_lastBackPressTime!) < const Duration(seconds: 2)) {
+      SystemNavigator.pop(); // 앱 종료
+      return;
+    }
+
+    // 종료 확인 다이얼로그 표시
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('앱 종료'),
+        content: const Text('앱을 종료하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('종료'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      SystemNavigator.pop(); // 앱 종료
     }
   }
 }

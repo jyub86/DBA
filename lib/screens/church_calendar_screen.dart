@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../models/church_event.dart';
 import '../utils/date_formatter.dart';
 import '../providers/user_data_provider.dart';
-import 'church_event_management_screen.dart';
 
 class ChurchCalendarScreen extends StatefulWidget {
   const ChurchCalendarScreen({super.key});
@@ -141,11 +140,9 @@ class _ChurchCalendarScreenState extends State<ChurchCalendarScreen> {
               icon: const Icon(Icons.event_note),
               tooltip: '일정 관리',
               onPressed: () {
-                Navigator.push(
+                Navigator.pushNamed(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const ChurchEventManagementScreen(),
-                  ),
+                  '/church-event-management',
                 ).then((_) => _loadEvents());
               },
             ),

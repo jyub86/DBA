@@ -8,6 +8,7 @@ import '../providers/user_data_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../constants/supabase_constants.dart';
 import '../services/logger_service.dart';
+import '../screens/main_screen.dart';
 
 class BoardScreen extends StatefulWidget {
   final int? initialCategoryId;
@@ -36,34 +37,40 @@ class BoardScreenState extends State<BoardScreen> {
   bool _isDisposed = false;
 
   void updateCategory(int categoryId) {
-    if (_selectedCategoryId != categoryId) {
-      setState(() {
-        _selectedCategoryId = categoryId;
-        _posts.clear();
-        _hasMore = true;
-        _searchQuery = null;
-        _searchController.clear();
-      });
+    if (categoryId != _selectedCategoryId) {
+      if (mounted) {
+        setState(() {
+          _selectedCategoryId = categoryId;
+          _posts.clear();
+          _hasMore = true;
+          _searchQuery = null;
+          _searchController.clear();
+        });
+      }
       _loadPosts();
     }
   }
 
   void _performSearch() {
-    setState(() {
-      _searchQuery = _searchController.text.trim();
-      _posts.clear();
-      _hasMore = true;
-    });
+    if (mounted) {
+      setState(() {
+        _searchQuery = _searchController.text.trim();
+        _posts.clear();
+        _hasMore = true;
+      });
+    }
     _loadPosts();
   }
 
   void _clearSearch() {
-    setState(() {
-      _searchQuery = null;
-      _searchController.clear();
-      _posts.clear();
-      _hasMore = true;
-    });
+    if (mounted) {
+      setState(() {
+        _searchQuery = null;
+        _searchController.clear();
+        _posts.clear();
+        _hasMore = true;
+      });
+    }
     _loadPosts();
   }
 
@@ -93,19 +100,25 @@ class BoardScreenState extends State<BoardScreen> {
   }
 
   Future<void> _loadCategories() async {
-    final categories = await CategoryService.instance.getCategories();
-    setState(() {
-      _categories = [
-        CategoryModel(
-          id: 0,
-          name: '전체',
-          order: -1,
-          active: true,
-          allowedLevel: 999,
-        ),
-        ...categories,
-      ];
-    });
+    try {
+      final categories = await CategoryService.instance.getCategories();
+      if (mounted) {
+        setState(() {
+          _categories = [
+            CategoryModel(
+              id: 0,
+              name: '전체',
+              order: -1,
+              active: true,
+              allowedLevel: 999,
+            ),
+            ...categories,
+          ];
+        });
+      }
+    } catch (e) {
+      LoggerService.error('카테고리 로드 중 에러 발생', e, null);
+    }
   }
 
   Future<void> _loadPosts() async {
@@ -113,11 +126,15 @@ class BoardScreenState extends State<BoardScreen> {
 
     final userData = _userDataProvider.userData;
     if (userData == null) {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
       return;
     }
 
-    setState(() => _isLoading = true);
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
 
     try {
       var query = Supabase.instance.client.from('posts').select('''
@@ -173,9 +190,13 @@ class BoardScreenState extends State<BoardScreen> {
 
   void _onScroll() {
     if (_scrollController.offset >= 1000 && !_showScrollToTop) {
-      setState(() => _showScrollToTop = true);
+      if (mounted) {
+        setState(() => _showScrollToTop = true);
+      }
     } else if (_scrollController.offset < 1000 && _showScrollToTop) {
-      setState(() => _showScrollToTop = false);
+      if (mounted) {
+        setState(() => _showScrollToTop = false);
+      }
     }
 
     if (_scrollController.position.pixels >=
@@ -198,88 +219,64 @@ class BoardScreenState extends State<BoardScreen> {
           );
         }
 
-        return Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: CachedNetworkImageProvider(
-                SupabaseConstants.backgroundImage,
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, dynamic result) {
+            if (!didPop) {
+              final mainScreen =
+                  context.findAncestorWidgetOfExactType<MainScreen>();
+              if (mainScreen != null) {
+                final mainScreenState =
+                    context.findAncestorStateOfType<MainScreenState>();
+                mainScreenState?.updateIndex(0, null);
+              } else {
+                Navigator.pushReplacementNamed(
+                  context,
+                  '/main',
+                  arguments: {'initialIndex': 0},
+                );
+              }
+            }
+          },
+          child: Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: CachedNetworkImageProvider(
+                  SupabaseConstants.backgroundImage,
+                ),
+                fit: BoxFit.cover,
               ),
-              fit: BoxFit.cover,
             ),
-          ),
-          child: Scaffold(
-            backgroundColor: Colors.transparent,
-            body: RefreshIndicator(
-              onRefresh: () async {
-                setState(() {
-                  _posts.clear();
-                  _hasMore = true;
-                });
-                await _loadPosts();
-              },
-              child: CustomScrollView(
-                controller: _scrollController,
-                slivers: [
-                  SliverAppBar(
-                    pinned: false,
-                    floating: true,
-                    snap: true,
-                    toolbarHeight: 52,
-                    backgroundColor: Colors.white.withAlpha(179),
-                    title: Row(
-                      children: [
-                        Container(
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withAlpha(179),
-                            borderRadius: BorderRadius.circular(4),
-                            border:
-                                Border.all(color: Colors.white.withAlpha(77)),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withAlpha(20),
-                                spreadRadius: 1,
-                                blurRadius: 3,
-                              ),
-                            ],
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<int>(
-                              value: _selectedCategoryId,
-                              items: _categories.map((category) {
-                                return DropdownMenuItem<int>(
-                                  value: category.id,
-                                  child: Text(
-                                    category.name,
-                                    style:
-                                        const TextStyle(color: Colors.black87),
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                updateCategory(value!);
-                              },
-                              dropdownColor: Colors.white.withAlpha(230),
-                              style: const TextStyle(color: Colors.black87),
-                              icon: const Icon(
-                                Icons.arrow_drop_down,
-                                size: 18,
-                                color: Colors.black87,
-                              ),
-                              isDense: true,
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 4),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Container(
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              body: RefreshIndicator(
+                onRefresh: () async {
+                  if (mounted) {
+                    setState(() {
+                      _posts.clear();
+                      _hasMore = true;
+                    });
+                  }
+                  await _loadPosts();
+                },
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  slivers: [
+                    SliverAppBar(
+                      pinned: false,
+                      floating: true,
+                      snap: true,
+                      toolbarHeight: 52,
+                      backgroundColor: Colors.white.withAlpha(179),
+                      title: Row(
+                        children: [
+                          Container(
                             height: 36,
                             decoration: BoxDecoration(
                               color: Colors.white.withAlpha(179),
                               borderRadius: BorderRadius.circular(4),
+                              border:
+                                  Border.all(color: Colors.white.withAlpha(77)),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withAlpha(20),
@@ -288,116 +285,162 @@ class BoardScreenState extends State<BoardScreen> {
                                 ),
                               ],
                             ),
-                            child: TextField(
-                              controller: _searchController,
-                              decoration: InputDecoration(
-                                hintText: '검색어를 입력하세요',
-                                hintStyle: const TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.black54,
-                                ),
-                                prefixIcon: const Icon(
-                                  Icons.search,
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<int>(
+                                value: _selectedCategoryId,
+                                items: _categories.map((category) {
+                                  return DropdownMenuItem<int>(
+                                    value: category.id,
+                                    child: Text(
+                                      category.name,
+                                      style: const TextStyle(
+                                          color: Colors.black87),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  updateCategory(value!);
+                                },
+                                dropdownColor: Colors.white.withAlpha(230),
+                                style: const TextStyle(color: Colors.black87),
+                                icon: const Icon(
+                                  Icons.arrow_drop_down,
                                   size: 18,
                                   color: Colors.black87,
                                 ),
-                                suffixIcon: _searchController.text.isNotEmpty
-                                    ? IconButton(
-                                        icon: const Icon(
-                                          Icons.clear,
-                                          size: 16,
-                                          color: Colors.black87,
-                                        ),
-                                        onPressed: _clearSearch,
-                                        padding: const EdgeInsets.all(4),
-                                      )
-                                    : null,
-                                border: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                    color: Colors.white.withAlpha(77),
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                    color: Colors.white.withAlpha(77),
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                    color: Colors.white.withAlpha(128),
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: Colors.transparent,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 0,
-                                  horizontal: 8,
-                                ),
                                 isDense: true,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 4),
                               ),
-                              onSubmitted: (_) => _performSearch(),
-                              onChanged: (value) {
-                                setState(() {});
-                              },
-                              style: const TextStyle(color: Colors.black87),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        SizedBox(
-                          height: 36,
-                          width: 36,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: _searchController.text.isEmpty
-                                  ? Colors.grey.withAlpha(77)
-                                  : Theme.of(context)
-                                      .primaryColor
-                                      .withAlpha(230),
-                              borderRadius: BorderRadius.circular(4),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(20),
-                                  spreadRadius: 1,
-                                  blurRadius: 3,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Container(
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(179),
+                                borderRadius: BorderRadius.circular(4),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(20),
+                                    spreadRadius: 1,
+                                    blurRadius: 3,
+                                  ),
+                                ],
+                              ),
+                              child: TextField(
+                                controller: _searchController,
+                                decoration: InputDecoration(
+                                  hintText: '검색어를 입력하세요',
+                                  hintStyle: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.black54,
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.search,
+                                    size: 18,
+                                    color: Colors.black87,
+                                  ),
+                                  suffixIcon: _searchController.text.isNotEmpty
+                                      ? IconButton(
+                                          icon: const Icon(
+                                            Icons.clear,
+                                            size: 16,
+                                            color: Colors.black87,
+                                          ),
+                                          onPressed: _clearSearch,
+                                          padding: const EdgeInsets.all(4),
+                                        )
+                                      : null,
+                                  border: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: Colors.white.withAlpha(77),
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: Colors.white.withAlpha(77),
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: Colors.white.withAlpha(128),
+                                    ),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.transparent,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 0,
+                                    horizontal: 8,
+                                  ),
+                                  isDense: true,
                                 ),
-                              ],
-                            ),
-                            child: IconButton(
-                              onPressed: _searchController.text.isEmpty
-                                  ? null
-                                  : _performSearch,
-                              icon: const Icon(
-                                Icons.search,
-                                size: 18,
-                                color: Colors.white,
+                                onSubmitted: (_) => _performSearch(),
+                                onChanged: (value) {
+                                  setState(() {});
+                                },
+                                style: const TextStyle(color: Colors.black87),
                               ),
-                              padding: EdgeInsets.zero,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (_searchQuery?.isNotEmpty == true)
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _SearchResultHeaderDelegate(
-                        searchQuery: _searchQuery!,
-                        onClear: _clearSearch,
+                          const SizedBox(width: 4),
+                          SizedBox(
+                            height: 36,
+                            width: 36,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: _searchController.text.isEmpty
+                                    ? Colors.grey.withAlpha(77)
+                                    : Theme.of(context)
+                                        .primaryColor
+                                        .withAlpha(230),
+                                borderRadius: BorderRadius.circular(4),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(20),
+                                    spreadRadius: 1,
+                                    blurRadius: 3,
+                                  ),
+                                ],
+                              ),
+                              child: IconButton(
+                                onPressed: _searchController.text.isEmpty
+                                    ? null
+                                    : _performSearch,
+                                icon: const Icon(
+                                  Icons.search,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                                padding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  _buildPostList(),
-                ],
+                    if (_searchQuery?.isNotEmpty == true)
+                      SliverPersistentHeader(
+                        pinned: true,
+                        delegate: _SearchResultHeaderDelegate(
+                          searchQuery: _searchQuery!,
+                          onClear: _clearSearch,
+                        ),
+                      ),
+                    _buildPostList(),
+                  ],
+                ),
               ),
-            ),
-            floatingActionButton: AnimatedOpacity(
-              opacity: _showScrollToTop ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 200),
-              child: FloatingActionButton(
-                mini: true,
-                onPressed: _showScrollToTop ? _scrollToTop : null,
-                child: const Icon(Icons.arrow_upward),
+              floatingActionButton: AnimatedOpacity(
+                opacity: _showScrollToTop ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: FloatingActionButton(
+                  mini: true,
+                  onPressed: _showScrollToTop ? _scrollToTop : null,
+                  child: const Icon(Icons.arrow_upward),
+                ),
               ),
             ),
           ),

@@ -6,9 +6,9 @@ import 'package:path/path.dart' as path;
 import '../services/category_service.dart';
 import '../models/post_model.dart';
 import '../models/category_model.dart';
-import '../screens/main_screen.dart';
 import '../providers/user_data_provider.dart';
 import '../services/logger_service.dart';
+import '../screens/main_screen.dart';
 
 class CreatePostScreen extends StatefulWidget {
   final Post? editPost; // 수정할 게시물
@@ -74,13 +74,15 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   void _addMediaUrlField() {
-    setState(() {
-      _mediaUrlControllers.add(TextEditingController());
-    });
+    if (mounted) {
+      setState(() {
+        _mediaUrlControllers.add(TextEditingController());
+      });
+    }
   }
 
   void _removeMediaUrlField(int index) {
-    if (_mediaUrlControllers.length > 1) {
+    if (_mediaUrlControllers.length > 1 && mounted) {
       setState(() {
         _mediaUrlControllers[index].dispose();
         _mediaUrlControllers.removeAt(index);
@@ -211,7 +213,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
 
     try {
       final userData = await _userDataProvider.getCurrentUser();
@@ -250,17 +254,24 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       }
 
       if (mounted) {
-        // MainScreen으로 이동하면서 스택 정리
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MainScreen(
-              initialIndex: 1, // 게시판 탭으로 이동
-              initialCategoryId: _selectedCategoryId, // 선택된 카테고리로 이동
-            ),
-          ),
-          (route) => false, // 모든 이전 화면 제거
-        );
+        // MainScreen으로 이동하면서 스택 정리 - 애니메이션 최적화
+        final mainScreen = context.findAncestorWidgetOfExactType<MainScreen>();
+        if (mainScreen != null) {
+          // MainScreen 내부에서 호출된 경우 (IndexedStack 사용)
+          final mainScreenState =
+              context.findAncestorStateOfType<MainScreenState>();
+          mainScreenState?.updateIndex(1, _selectedCategoryId);
+        } else {
+          // 독립적으로 호출된 경우 (Navigator 사용)
+          Navigator.pushReplacementNamed(
+            context,
+            '/main',
+            arguments: {
+              'initialIndex': 1, // 게시판 탭으로 이동
+              'initialCategoryId': _selectedCategoryId, // 선택된 카테고리로 이동
+            },
+          );
+        }
       }
     } catch (e) {
       debugPrint('게시물 저장 중 에러 발생: $e');
@@ -278,247 +289,272 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.editPost != null ? '게시물 수정' : '새 게시물'),
-      ),
-      body: Stack(
-        children: [
-          Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: 80, // 하단 버튼을 위한 여백
-              ),
-              children: [
-                DropdownButtonFormField<int?>(
-                  value: _selectedCategoryId,
-                  decoration: const InputDecoration(
-                    labelText: '카테고리',
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    isDense: true,
-                  ),
-                  items: _availableCategories.map((category) {
-                    return DropdownMenuItem<int?>(
-                      value: category.id,
-                      child: Text(
-                        category.name,
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (value) =>
-                      setState(() => _selectedCategoryId = value),
-                  validator: (value) {
-                    if (value == null) {
-                      return '카테고리를 선택해주세요';
-                    }
-                    return null;
-                  },
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, dynamic result) {
+        if (!didPop) {
+          // 홈 화면으로 이동 - 애니메이션 최적화
+          final mainScreen =
+              context.findAncestorWidgetOfExactType<MainScreen>();
+          if (mainScreen != null) {
+            // MainScreen 내부에서 호출된 경우 (IndexedStack 사용)
+            final mainScreenState =
+                context.findAncestorStateOfType<MainScreenState>();
+            mainScreenState?.updateIndex(0, null);
+          } else {
+            // 독립적으로 호출된 경우 (Navigator 사용)
+            Navigator.pushReplacementNamed(
+              context,
+              '/main',
+              arguments: {'initialIndex': 0},
+            );
+          }
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.editPost != null ? '게시물 수정' : '새 게시물'),
+        ),
+        body: Stack(
+          children: [
+            Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom: 80, // 하단 버튼을 위한 여백
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                    labelText: '제목',
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    isDense: true,
-                  ),
-                  style: const TextStyle(fontSize: 14),
-                  validator: (value) {
-                    if (value?.isEmpty ?? true) {
-                      return '제목을 입력해주세요';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _contentController,
-                  decoration: const InputDecoration(
-                    labelText: '내용',
-                    border: OutlineInputBorder(),
-                    alignLabelWithHint: true,
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  style: const TextStyle(fontSize: 14),
-                  maxLines: 8,
-                ),
-                const SizedBox(height: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('이미지'),
-                        TextButton.icon(
-                          onPressed: _pickImages,
-                          icon: const Icon(Icons.add_photo_alternate),
-                          label: const Text('이미지 추가'),
-                          style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                        ),
-                      ],
+                children: [
+                  DropdownButtonFormField<int?>(
+                    value: _selectedCategoryId,
+                    decoration: const InputDecoration(
+                      labelText: '카테고리',
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      isDense: true,
                     ),
-                    if (_selectedImages.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 100,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _selectedImages.length,
-                          itemBuilder: (context, index) {
-                            return Stack(
-                              children: [
-                                Container(
-                                  width: 100,
-                                  height: 100,
-                                  margin: const EdgeInsets.only(right: 8),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    image: DecorationImage(
-                                      image: FileImage(_selectedImages[index]),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  top: 4,
-                                  right: 12,
-                                  child: GestureDetector(
-                                    onTap: () => _removeImage(index),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(2),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .surface,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.close,
-                                        size: 16,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('미디어 URL'),
-                    const SizedBox(height: 8),
-                    ..._mediaUrlControllers.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final controller = entry.value;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: controller,
-                                decoration: const InputDecoration(
-                                  hintText: '미디어 URL을 입력하세요',
-                                  border: OutlineInputBorder(),
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 8),
-                                ),
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            if (_mediaUrlControllers.length > 1)
-                              IconButton(
-                                icon: const Icon(Icons.remove_circle_outline,
-                                    size: 18),
-                                onPressed: () => _removeMediaUrlField(index),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                iconSize: 18,
-                              ),
-                          ],
+                    items: _availableCategories.map((category) {
+                      return DropdownMenuItem<int?>(
+                        value: category.id,
+                        child: Text(
+                          category.name,
+                          style: const TextStyle(fontSize: 14),
                         ),
                       );
-                    }),
-                    TextButton.icon(
-                      onPressed: _addMediaUrlField,
-                      icon: const Icon(Icons.add),
-                      label: const Text('URL 추가'),
-                      style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                    }).toList(),
+                    onChanged: (value) =>
+                        setState(() => _selectedCategoryId = value),
+                    validator: (value) {
+                      if (value == null) {
+                        return '카테고리를 선택해주세요';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _titleController,
+                    decoration: const InputDecoration(
+                      labelText: '제목',
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      isDense: true,
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(26),
-                    blurRadius: 4,
-                    offset: const Offset(0, -2),
+                    style: const TextStyle(fontSize: 14),
+                    validator: (value) {
+                      if (value?.isEmpty ?? true) {
+                        return '제목을 입력해주세요';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _contentController,
+                    decoration: const InputDecoration(
+                      labelText: '내용',
+                      border: OutlineInputBorder(),
+                      alignLabelWithHint: true,
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    style: const TextStyle(fontSize: 14),
+                    maxLines: 8,
+                  ),
+                  const SizedBox(height: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('이미지'),
+                          TextButton.icon(
+                            onPressed: _pickImages,
+                            icon: const Icon(Icons.add_photo_alternate),
+                            label: const Text('이미지 추가'),
+                            style:
+                                TextButton.styleFrom(padding: EdgeInsets.zero),
+                          ),
+                        ],
+                      ),
+                      if (_selectedImages.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          height: 100,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _selectedImages.length,
+                            itemBuilder: (context, index) {
+                              return Stack(
+                                children: [
+                                  Container(
+                                    width: 100,
+                                    height: 100,
+                                    margin: const EdgeInsets.only(right: 8),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      image: DecorationImage(
+                                        image:
+                                            FileImage(_selectedImages[index]),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 4,
+                                    right: 12,
+                                    child: GestureDetector(
+                                      onTap: () => _removeImage(index),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .surface,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.close,
+                                          size: 16,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('미디어 URL'),
+                      const SizedBox(height: 8),
+                      ..._mediaUrlControllers.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final controller = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: controller,
+                                  decoration: const InputDecoration(
+                                    hintText: '미디어 URL을 입력하세요',
+                                    border: OutlineInputBorder(),
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
+                                  ),
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              if (_mediaUrlControllers.length > 1)
+                                IconButton(
+                                  icon: const Icon(Icons.remove_circle_outline,
+                                      size: 18),
+                                  onPressed: () => _removeMediaUrlField(index),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  iconSize: 18,
+                                ),
+                            ],
+                          ),
+                        );
+                      }),
+                      TextButton.icon(
+                        onPressed: _addMediaUrlField,
+                        icon: const Icon(Icons.add),
+                        label: const Text('URL 추가'),
+                        style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _savePost,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(26),
+                      blurRadius: 4,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
                 ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _savePost,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Text(
+                          widget.editPost != null ? '수정하기' : '게시하기',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      )
-                    : Text(
-                        widget.editPost != null ? '수정하기' : '게시하기',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

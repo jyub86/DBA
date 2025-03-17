@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/terms_agreement.dart';
 import '../constants/terms_constants.dart';
-import 'terms_webview.dart';
 
 class TermsAgreementWidget extends StatelessWidget {
   final TermsAgreement agreement;
@@ -83,13 +82,12 @@ class TermsAgreementWidget extends StatelessWidget {
               const Spacer(),
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const TermsWebView(
-                        assetPath: TermsConstants.termsOfServicePath,
-                        title: '이용약관',
-                      ),
-                    ),
+                  Navigator.of(context).pushNamed(
+                    '/terms-webview',
+                    arguments: {
+                      'assetPath': TermsConstants.termsOfServicePath,
+                      'title': '이용약관',
+                    },
                   );
                 },
                 child: const Text('보기'),
@@ -125,13 +123,12 @@ class TermsAgreementWidget extends StatelessWidget {
               const Spacer(),
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const TermsWebView(
-                        assetPath: TermsConstants.privacyPolicyPath,
-                        title: '개인정보 처리방침',
-                      ),
-                    ),
+                  Navigator.of(context).pushNamed(
+                    '/terms-webview',
+                    arguments: {
+                      'assetPath': TermsConstants.privacyPolicyPath,
+                      'title': '개인정보 처리방침',
+                    },
                   );
                 },
                 child: const Text('보기'),

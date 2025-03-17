@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/church_event.dart';
 import '../utils/date_formatter.dart';
-import 'church_event_form_screen.dart';
 
 class ChurchEventManagementScreen extends StatefulWidget {
   const ChurchEventManagementScreen({super.key});
@@ -78,14 +77,10 @@ class _ChurchEventManagementScreenState
             icon: const Icon(Icons.add),
             tooltip: '새 일정',
             onPressed: () {
-              Navigator.push(
+              Navigator.pushNamed(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const ChurchEventFormScreen(),
-                ),
-              ).then((value) {
-                if (value == true) _loadEvents();
-              });
+                '/church-event-form',
+              ).then((_) => _loadEvents());
             },
           ),
         ],
@@ -122,15 +117,11 @@ class _ChurchEventManagementScreenState
                         IconButton(
                           icon: const Icon(Icons.edit),
                           onPressed: () {
-                            Navigator.push(
+                            Navigator.pushNamed(
                               context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ChurchEventFormScreen(event: event),
-                              ),
-                            ).then((value) {
-                              if (value == true) _loadEvents();
-                            });
+                              '/church-event-form',
+                              arguments: {'event': event},
+                            ).then((_) => _loadEvents());
                           },
                         ),
                         IconButton(
