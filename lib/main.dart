@@ -394,10 +394,6 @@ class MyApp extends StatelessWidget {
     // 앱 설정
     AppRoutes.shouldNavigateToNotification = shouldNavigateToNotification;
 
-    // 앱 색상 테마 정의
-    const primaryColor = Color(0xFF3F51B5); // 인디고
-    const secondaryColor = Color(0xFFF44336); // 레드
-
     return MaterialApp(
       title: '부평동부교회',
       debugShowCheckedModeBanner: false,
