@@ -381,13 +381,34 @@ void _checkEnvironmentVariables() {
 
 // 앱이 종료된 상태에서 알림 클릭으로 시작된 경우
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  // shouldNavigateToNotification 매개변수를 선택적으로 변경
+  final bool shouldNavigateToNotification;
+
+  const MyApp({
+    Key? key,
+    this.shouldNavigateToNotification = false, // 기본값 추가
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // 앱 설정
+    AppRoutes.shouldNavigateToNotification = shouldNavigateToNotification;
+
+    // 앱 색상 테마 정의
+    const primaryColor = Color(0xFF3F51B5); // 인디고
+    const secondaryColor = Color(0xFFF44336); // 레드
+
     return MaterialApp(
       title: '부평동부교회',
+      debugShowCheckedModeBanner: false,
+      // NotificationService.navigatorKey 사용
       navigatorKey: NotificationService.navigatorKey,
+      // navigatorKey와 라우팅을 위한 navigatorKey를 동일하게 설정
+      onGenerateInitialRoutes: (String initialRouteName) {
+        // navigatorKey 일치시키기
+        // navigatorKey = NotificationService.navigatorKey; - 제거 (final 변수라 변경할 수 없음)
+        return [AppRoutes.generateRoute(RouteSettings(name: initialRouteName))];
+      },
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -477,7 +498,6 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/',
       onGenerateRoute: AppRoutes.generateRoute,
-      debugShowCheckedModeBanner: false,
     );
   }
 }

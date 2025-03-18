@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'dart:io' show Platform;
 import 'package:dba/screens/login_screen.dart';
 import 'package:dba/screens/main_screen.dart';
 import 'package:dba/screens/signup_screen.dart';
@@ -26,6 +28,9 @@ import 'package:dba/models/church_event.dart';
 // MainScreen의 상태를 보존하기 위한 전역 키는 더 이상 필요하지 않음
 // final GlobalKey<State<MainScreen>> mainScreenKey =
 //     GlobalKey<State<MainScreen>>();
+
+// NavigatorService 대신 GlobalKey 사용
+GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class AppRoutes {
   // 라우트 이름 상수 정의
@@ -58,8 +63,16 @@ class AppRoutes {
   static MainScreen? cachedMainScreen;
 
   // 커스텀 페이지 라우트 생성 함수
-  static PageRouteBuilder _createPageRoute(
-      Widget page, RouteSettings settings) {
+  static PageRoute _createPageRoute(Widget page, RouteSettings settings) {
+    // iOS에서는 CupertinoPageRoute를 사용하여 네이티브 스와이프 기능 활성화
+    if (Platform.isIOS) {
+      return CupertinoPageRoute(
+        settings: settings,
+        builder: (context) => page,
+      );
+    }
+
+    // 안드로이드 및 기타 플랫폼에서는 커스텀 애니메이션 사용
     return PageRouteBuilder(
       settings: settings,
       pageBuilder: (context, animation, secondaryAnimation) => page,
@@ -80,45 +93,50 @@ class AppRoutes {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case '/':
-        return MaterialPageRoute(
-          builder: (context) {
-            if (shouldNavigateToNotification) {
-              // 알림 화면으로 이동해야 할 경우 새로운 MainScreen 생성
-              // GlobalKey 충돌을 방지하기 위해 key를 사용하지 않음
-              return const MainScreen(initialIndex: 3);
-            }
-            return const LoginScreen();
-          },
-          settings: settings,
+        return _createPageRoute(
+          shouldNavigateToNotification
+              ? const MainScreen(initialIndex: 3)
+              : const LoginScreen(),
+          settings,
         );
 
       case login:
-        return MaterialPageRoute(
-          builder: (context) => const LoginScreen(),
-          settings: settings,
+        return _createPageRoute(
+          const LoginScreen(),
+          settings,
         );
 
       case loginCallback:
-        return MaterialPageRoute(
-          builder: (context) => const LoginScreen(),
-          settings: settings,
+        return _createPageRoute(
+          const LoginScreen(),
+          settings,
         );
 
       case signup:
         final args = settings.arguments as Map<String, dynamic>;
-        return MaterialPageRoute(
-          builder: (context) => SignUpScreen(
+        return _createPageRoute(
+          SignUpScreen(
             email: args['email'],
             profileUrl: args['profileUrl'],
             name: args['name'],
           ),
-          settings: settings,
+          settings,
         );
 
       case main:
         final args = settings.arguments as Map<String, dynamic>?;
+        // iOS에서는 CupertinoPageRoute 사용
+        if (Platform.isIOS) {
+          return CupertinoPageRoute(
+            settings: settings,
+            builder: (context) => MainScreen(
+              initialIndex: args?['initialIndex'] ?? 0,
+              initialCategoryId: args?['initialCategoryId'],
+            ),
+          );
+        }
 
-        // 싱글톤 패턴 대신 일반 생성자 사용
+        // 안드로이드 및 기타 플랫폼에서는 기존 애니메이션 사용
         return PageRouteBuilder(
           settings: settings,
           pageBuilder: (context, animation, secondaryAnimation) {
@@ -248,7 +266,6 @@ class AppRoutes {
         return _createPageRoute(
           CommentsScreen(
             postId: args['postId'],
-            onCommentUpdated: args['onCommentUpdated'],
           ),
           settings,
         );

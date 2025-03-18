@@ -582,22 +582,37 @@ class _YearbookScreenState extends State<YearbookScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: true, // iOS 스와이프 제스처 허용
       onPopInvokedWithResult: (didPop, dynamic result) {
-        if (!didPop) {
-          // 홈 화면으로 이동하기 위해 Navigator.pushNamedAndRemoveUntil 사용
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            '/main',
-            (route) => false,
-            arguments: {'initialIndex': 0},
-          );
+        if (didPop) {
+          // 기본 뒤로가기 동작 실행됨 (iOS 스와이프 포함)
+          return;
         }
+
+        // 안드로이드 물리적 뒤로가기 버튼을 눌렀을 때 실행될 코드
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/main',
+          (route) => false,
+          arguments: {'initialIndex': 0},
+        );
       },
       child: Scaffold(
         appBar: AppBar(
           title: const Text('교인 연락처'),
           elevation: 0,
+          // 뒤로가기 버튼 커스터마이징
+          leading: BackButton(
+            onPressed: () {
+              // 홈 화면으로 이동
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/main',
+                (route) => false,
+                arguments: {'initialIndex': 0},
+              );
+            },
+          ),
           actions: [
             // 정렬 기준 선택 드롭다운
             PopupMenuButton<String>(
@@ -749,205 +764,187 @@ class _YearbookScreenState extends State<YearbookScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : _filteredUsers.isEmpty
                       ? const Center(child: Text('검색 결과가 없습니다.'))
-                      : ListenableBuilder(
-                          listenable: _userDataProvider,
-                          builder: (context, _) {
-                            final currentUser = _userDataProvider.userData;
-                            final isManager = currentUser?.canManage ?? false;
-
-                            return ListView.builder(
-                              itemCount: _filteredUsers.length,
-                              itemBuilder: (context, index) {
-                                final user = _filteredUsers[index];
-                                final isNonMember = !(user.member ?? true);
-                                final isPrivate = !user.isInfoPublic;
-
-                                return ListTile(
-                                  leading: Stack(
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 25,
-                                        backgroundImage:
-                                            user.profilePicture != null
-                                                ? CachedNetworkImageProvider(
-                                                    user.profilePicture!)
-                                                : null,
-                                        child: user.profilePicture == null
-                                            ? const Icon(Icons.person)
-                                            : null,
-                                      ),
-                                      if (isNonMember)
-                                        Positioned(
-                                          right: 0,
-                                          bottom: 0,
-                                          child: Container(
-                                            padding: const EdgeInsets.all(2),
-                                            decoration: BoxDecoration(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .error
-                                                  .withAlpha(26),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: const Icon(
-                                              Icons.person_off,
-                                              size: 12,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  title: Row(
-                                    children: [
-                                      Text(
-                                        user.name ?? '이름 없음',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      if (isNonMember) ...[
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .error
-                                                .withAlpha(26),
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            '비멤버',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .error
-                                                  .withAlpha(179),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                      if (isPrivate && isManager) ...[
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .secondary
-                                                .withAlpha(26),
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            '비공개',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .secondary
-                                                  .withAlpha(179),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                  subtitle: user.office != null
-                                      ? Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              user.office!,
-                                              style: TextStyle(
-                                                color: Theme.of(context)
-                                                    .textTheme
-                                                    .bodyMedium
-                                                    ?.color
-                                                    ?.withAlpha(179),
-                                              ),
-                                            ),
-                                            if (user.groups.isNotEmpty) ...[
-                                              const SizedBox(height: 4),
-                                              Wrap(
-                                                spacing: 4,
-                                                runSpacing: 4,
-                                                children: user.groups
-                                                    .map((group) => Container(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .symmetric(
-                                                            horizontal: 8,
-                                                            vertical: 2,
-                                                          ),
-                                                          decoration:
-                                                              BoxDecoration(
-                                                            color: Theme.of(
-                                                                    context)
-                                                                .primaryColor
-                                                                .withAlpha(26),
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        4),
-                                                          ),
-                                                          child: Text(
-                                                            group,
-                                                            style: TextStyle(
-                                                              fontSize: 12,
-                                                              color: Theme.of(
-                                                                      context)
-                                                                  .primaryColor,
-                                                            ),
-                                                          ),
-                                                        ))
-                                                    .toList(),
-                                              ),
-                                            ],
-                                          ],
-                                        )
-                                      : null,
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (user.phone != null &&
-                                          user.phone!.isNotEmpty) ...[
-                                        IconButton(
-                                          icon: const Icon(Icons.phone),
-                                          onPressed: () =>
-                                              _makePhoneCall(user.phone),
-                                          color: Theme.of(context).primaryColor,
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.message),
-                                          onPressed: () => _sendSMS(user.phone),
-                                          color: Theme.of(context).primaryColor,
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                  onTap: () =>
-                                      _showUserInfoDialog(user, isManager),
-                                );
-                              },
-                            );
-                          },
-                        ),
+                      : _buildUserList(),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildUserList() {
+    return ListenableBuilder(
+      listenable: _userDataProvider,
+      builder: (context, _) {
+        final currentUser = _userDataProvider.userData;
+        final isManager = currentUser?.canManage ?? false;
+
+        return ListView.builder(
+          itemCount: _filteredUsers.length,
+          itemBuilder: (context, index) {
+            final user = _filteredUsers[index];
+            final isNonMember = !(user.member ?? true);
+            final isPrivate = !user.isInfoPublic;
+
+            return ListTile(
+              leading: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 25,
+                    backgroundImage: user.profilePicture != null
+                        ? CachedNetworkImageProvider(user.profilePicture!)
+                        : null,
+                    child: user.profilePicture == null
+                        ? const Icon(Icons.person)
+                        : null,
+                  ),
+                  if (isNonMember)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color:
+                              Theme.of(context).colorScheme.error.withAlpha(26),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.person_off,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              title: Row(
+                children: [
+                  Text(
+                    user.name ?? '이름 없음',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (isNonMember) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            Theme.of(context).colorScheme.error.withAlpha(26),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '비멤버',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .error
+                              .withAlpha(179),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (isPrivate && isManager) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .secondary
+                            .withAlpha(26),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '비공개',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .secondary
+                              .withAlpha(179),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              subtitle: _buildUserSubtitle(user, context),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (user.phone != null && user.phone!.isNotEmpty) ...[
+                    IconButton(
+                      icon: const Icon(Icons.phone),
+                      onPressed: () => _makePhoneCall(user.phone),
+                      color: Theme.of(context).primaryColor,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.message),
+                      onPressed: () => _sendSMS(user.phone),
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ],
+                ],
+              ),
+              onTap: () => _showUserInfoDialog(user, isManager),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget? _buildUserSubtitle(UserData user, BuildContext context) {
+    if (user.office == null) return null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          user.office!,
+          style: TextStyle(
+            color:
+                Theme.of(context).textTheme.bodyMedium?.color?.withAlpha(179),
+          ),
+        ),
+        if (user.groups.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: user.groups
+                .map((group) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withAlpha(26),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        group,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                    ))
+                .toList(),
+          ),
+        ],
+      ],
     );
   }
 }
