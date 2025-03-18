@@ -89,6 +89,8 @@ class _InquiryScreenState extends State<InquiryScreen> {
       context: context,
       builder: (context) => CreateInquiryDialog(
         userId: userData.authId,
+        userName: userData.name,
+        userEmail: userData.email,
         onInquiryCreated: _loadInquiries,
       ),
     );
@@ -143,14 +145,35 @@ class InquiryCard extends StatelessWidget {
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.access_time, size: 14),
-              const SizedBox(width: 4),
-              Text(
-                inquiry.createdAt.toLocal().toString().split('.')[0],
-                style: Theme.of(context).textTheme.bodySmall,
+              Row(
+                children: [
+                  const Icon(Icons.access_time, size: 14),
+                  const SizedBox(width: 4),
+                  Text(
+                    inquiry.createdAt.toLocal().toString().split('.')[0],
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
               ),
+              if (inquiry.userName != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.person, size: 14),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        '${inquiry.userName ?? "알 수 없음"}${inquiry.userEmail != null ? " (${inquiry.userEmail})" : ""}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -161,6 +184,45 @@ class InquiryCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (inquiry.userName != null || inquiry.userEmail != null) ...[
+                  const Text(
+                    '문의자 정보',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withAlpha(50),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (inquiry.userName != null)
+                          Text(
+                            '이름: ${inquiry.userName}',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        if (inquiry.userEmail != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '이메일: ${inquiry.userEmail}',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
                 const Text(
                   '문의내용',
                   style: TextStyle(
@@ -222,6 +284,13 @@ class InquiryCard extends StatelessWidget {
                           '답변일시: ${inquiry.answeredAt?.toLocal().toString().split('.')[0]}',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
+                        if (inquiry.answererName != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '답변자: ${inquiry.answererName}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -323,11 +392,15 @@ class InquiryCard extends StatelessWidget {
 
 class CreateInquiryDialog extends StatefulWidget {
   final String userId;
+  final String? userName;
+  final String? userEmail;
   final VoidCallback onInquiryCreated;
 
   const CreateInquiryDialog({
     super.key,
     required this.userId,
+    this.userName,
+    this.userEmail,
     required this.onInquiryCreated,
   });
 
@@ -378,6 +451,8 @@ class _CreateInquiryDialogState extends State<CreateInquiryDialog> {
         title: title,
         content: content,
         userId: widget.userId,
+        userName: widget.userName,
+        userEmail: widget.userEmail,
       );
       if (!context.mounted) return;
       Navigator.pop(context);
