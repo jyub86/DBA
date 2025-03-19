@@ -124,8 +124,14 @@ class MainScreenState extends State<MainScreen> {
 
             // 배너가 있는 경우 중앙에서 시작하도록 설정
             if (banners.isNotEmpty) {
-              // 충분히 큰 숫자로 중앙 위치를 설정 (무한 스크롤을 위해)
-              _bannerController.jumpToPage(1000 * banners.length);
+              // 렌더링 후 다음 프레임에서 실행하도록 스케줄링
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                // 컨트롤러가 연결되었는지 확인 후 실행
+                if (_bannerController.hasClients) {
+                  // 충분히 큰 숫자로 중앙 위치를 설정 (무한 스크롤을 위해)
+                  _bannerController.jumpToPage(1000 * banners.length);
+                }
+              });
             }
           });
         }
@@ -198,8 +204,14 @@ class MainScreenState extends State<MainScreen> {
 
         // 배너가 있는 경우 중앙에서 시작하도록 설정
         if (banners.isNotEmpty) {
-          // 충분히 큰 숫자로 중앙 위치를 설정 (무한 스크롤을 위해)
-          _bannerController.jumpToPage(1000 * banners.length);
+          // 렌더링 후 다음 프레임에서 실행하도록 스케줄링
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            // 컨트롤러가 연결되었는지 확인 후 실행
+            if (_bannerController.hasClients) {
+              // 충분히 큰 숫자로 중앙 위치를 설정 (무한 스크롤을 위해)
+              _bannerController.jumpToPage(1000 * banners.length);
+            }
+          });
         }
       });
 

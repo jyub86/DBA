@@ -49,10 +49,7 @@ class _YearbookScreenState extends State<YearbookScreen> {
     }
 
     final cleanNumber = phoneNumber.replaceAll('-', '');
-    final Uri launchUri = Uri(
-      scheme: 'tel',
-      path: cleanNumber,
-    );
+    final Uri launchUri = Uri(scheme: 'tel', path: cleanNumber);
 
     try {
       await launchUrl(launchUri);
@@ -80,10 +77,7 @@ class _YearbookScreenState extends State<YearbookScreen> {
     }
 
     final cleanNumber = phoneNumber.replaceAll('-', '');
-    final Uri launchUri = Uri(
-      scheme: 'sms',
-      path: cleanNumber,
-    );
+    final Uri launchUri = Uri(scheme: 'sms', path: cleanNumber);
 
     try {
       await launchUrl(launchUri);
@@ -178,8 +172,9 @@ class _YearbookScreenState extends State<YearbookScreen> {
           final searchLower = query.toLowerCase();
 
           // 그룹 이름 검색 추가
-          final hasMatchingGroup = user.groups
-              .any((group) => group.toLowerCase().contains(searchLower));
+          final hasMatchingGroup = user.groups.any(
+            (group) => group.toLowerCase().contains(searchLower),
+          );
 
           return nameLower.contains(searchLower) ||
               officeLower.contains(searchLower) ||
@@ -236,18 +231,18 @@ class _YearbookScreenState extends State<YearbookScreen> {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color:
-                        Theme.of(context).colorScheme.secondary.withAlpha(26),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.secondary.withAlpha(26),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     '비공개',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .secondary
-                          .withAlpha(179),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.secondary.withAlpha(179),
                     ),
                   ),
                 ),
@@ -375,8 +370,9 @@ class _YearbookScreenState extends State<YearbookScreen> {
         );
 
         await CustomUserService.instance.updateUserInfo(
-            updatedUser.toUpdateJson(),
-            authId: updatedUser.authId);
+          updatedUser.toUpdateJson(),
+          authId: updatedUser.authId,
+        );
 
         // 현재 필터 상태 저장
         final currentFilter = _showOnlyNonMembers;
@@ -449,20 +445,18 @@ class _YearbookScreenState extends State<YearbookScreen> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .secondary
-                                .withAlpha(26),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.secondary.withAlpha(26),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             '비공개',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .secondary
-                                  .withAlpha(179),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.secondary.withAlpha(179),
                             ),
                           ),
                         ),
@@ -474,11 +468,9 @@ class _YearbookScreenState extends State<YearbookScreen> {
                       user.office!,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.color
-                            ?.withAlpha(179),
+                        color: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.color?.withAlpha(179),
                       ),
                     ),
                 ],
@@ -637,7 +629,8 @@ class _YearbookScreenState extends State<YearbookScreen> {
             ),
             IconButton(
               icon: Icon(
-                  _isAscending ? Icons.arrow_upward : Icons.arrow_downward),
+                _isAscending ? Icons.arrow_upward : Icons.arrow_downward,
+              ),
               onPressed: () {
                 setState(() {
                   _isAscending = !_isAscending;
@@ -805,8 +798,9 @@ class _YearbookScreenState extends State<YearbookScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(2),
                         decoration: BoxDecoration(
-                          color:
-                              Theme.of(context).colorScheme.error.withAlpha(26),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.error.withAlpha(26),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -835,18 +829,18 @@ class _YearbookScreenState extends State<YearbookScreen> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color:
-                            Theme.of(context).colorScheme.error.withAlpha(26),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.error.withAlpha(26),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         '비멤버',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .error
-                              .withAlpha(179),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.error.withAlpha(179),
                         ),
                       ),
                     ),
@@ -859,20 +853,18 @@ class _YearbookScreenState extends State<YearbookScreen> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .secondary
-                            .withAlpha(26),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.secondary.withAlpha(26),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         '비공개',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .secondary
-                              .withAlpha(179),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.secondary.withAlpha(179),
                         ),
                       ),
                     ),
@@ -914,8 +906,9 @@ class _YearbookScreenState extends State<YearbookScreen> {
         Text(
           user.office!,
           style: TextStyle(
-            color:
-                Theme.of(context).textTheme.bodyMedium?.color?.withAlpha(179),
+            color: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.color?.withAlpha(179),
           ),
         ),
         if (user.groups.isNotEmpty) ...[
@@ -924,23 +917,25 @@ class _YearbookScreenState extends State<YearbookScreen> {
             spacing: 4,
             runSpacing: 4,
             children: user.groups
-                .map((group) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
+                .map(
+                  (group) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withAlpha(26),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      group,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).primaryColor,
                       ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withAlpha(26),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        group,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ),
-                    ))
+                    ),
+                  ),
+                )
                 .toList(),
           ),
         ],
