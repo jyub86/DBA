@@ -103,6 +103,12 @@ class MainScreenState extends State<MainScreen> {
             categories = _globalCategories;
             banners = _globalBanners;
             isLoading = false;
+
+            // 배너가 있는 경우 중앙에서 시작하도록 설정
+            if (banners.isNotEmpty) {
+              // 충분히 큰 숫자로 중앙 위치를 설정 (무한 스크롤을 위해)
+              _bannerController.jumpToPage(1000 * banners.length);
+            }
           });
         }
       } else {
@@ -123,13 +129,12 @@ class MainScreenState extends State<MainScreen> {
 
   void _startBannerTimer() {
     _bannerTimer?.cancel();
-    _bannerTimer = Timer.periodic(const Duration(seconds: 8), (timer) {
+    _bannerTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
       if (banners.isEmpty || !mounted || !_bannerController.hasClients) return;
 
-      final nextPage = (_currentBannerIndex + 1) % banners.length;
-      _bannerController.animateToPage(
-        nextPage,
-        duration: const Duration(milliseconds: 1000),
+      // 다음 페이지로 자연스럽게 이동 (무한 스크롤)
+      _bannerController.nextPage(
+        duration: const Duration(milliseconds: 2000),
         curve: Curves.easeInOut,
       );
     });
@@ -172,6 +177,12 @@ class MainScreenState extends State<MainScreen> {
         categories = _globalCategories;
         isLoading = false;
         _globalDataLoaded = true; // 데이터 로드 완료 표시
+
+        // 배너가 있는 경우 중앙에서 시작하도록 설정
+        if (banners.isNotEmpty) {
+          // 충분히 큰 숫자로 중앙 위치를 설정 (무한 스크롤을 위해)
+          _bannerController.jumpToPage(1000 * banners.length);
+        }
       });
 
       if (banners.isNotEmpty) {
@@ -435,22 +446,25 @@ class MainScreenState extends State<MainScreen> {
                             borderRadius: BorderRadius.circular(24),
                             child: PageView.builder(
                               controller: _bannerController,
-                              itemCount: banners.length,
+                              // 무한 스크롤을 위해 매우 큰 숫자로 설정
+                              itemCount: banners.isEmpty ? 0 : null,
                               onPageChanged: (index) {
                                 setState(() {
-                                  _currentBannerIndex = index;
+                                  _currentBannerIndex = index % banners.length;
                                 });
                               },
                               itemBuilder: (context, index) {
+                                // 배너 배열 인덱스 계산 (무한 스크롤)
+                                final bannerIndex = index % banners.length;
                                 return GestureDetector(
                                   onTap: () {
-                                    if (banners[index].link != null) {
-                                      launchUrl(
-                                          Uri.parse(banners[index].link!));
+                                    if (banners[bannerIndex].link != null) {
+                                      launchUrl(Uri.parse(
+                                          banners[bannerIndex].link!));
                                     }
                                   },
                                   child: CachedNetworkImage(
-                                    imageUrl: banners[index].imageUrl,
+                                    imageUrl: banners[bannerIndex].imageUrl,
                                     fit: BoxFit.cover,
                                     placeholder: (context, url) => const Center(
                                       child: CircularProgressIndicator(),
