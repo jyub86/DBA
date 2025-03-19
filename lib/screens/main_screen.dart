@@ -15,6 +15,7 @@ import 'notification_screen.dart';
 import '../providers/user_data_provider.dart';
 import '../constants/supabase_constants.dart';
 import '../services/logger_service.dart';
+import 'webview_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final int initialIndex;
@@ -247,6 +248,18 @@ class MainScreenState extends State<MainScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _handleMenuTap(String url, String title) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WebViewScreen(
+          url: url,
+          title: title,
         ),
       ),
     );
@@ -588,24 +601,16 @@ class MainScreenState extends State<MainScreen> {
                       label: '홈페이지',
                       iconUrl:
                           'https://nfivyduwknskpfhuyzeg.supabase.co/storage/v1/object/public/icons//homepage.png',
-                      onTap: () {
-                        launchUrl(
-                          Uri.parse('https://dbchurch.net'),
-                          mode: LaunchMode.externalApplication,
-                        );
-                      },
+                      onTap: () =>
+                          _handleMenuTap('https://dbchurch.net', '홈페이지'),
                     ),
                     // 유튜브 메뉴
                     _buildMenuButton(
                       label: '유튜브',
                       iconUrl:
                           'https://nfivyduwknskpfhuyzeg.supabase.co/storage/v1/object/public/icons//youtube.png',
-                      onTap: () {
-                        launchUrl(
-                          Uri.parse('https://www.youtube.com/@dbchurch'),
-                          mode: LaunchMode.externalApplication,
-                        );
-                      },
+                      onTap: () => _handleMenuTap(
+                          'https://www.youtube.com/@dbchurch', '유튜브'),
                     ),
                     // 빈 공간을 위한 투명한 버튼
                     const SizedBox(),
