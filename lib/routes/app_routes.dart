@@ -197,6 +197,7 @@ class AppRoutes {
         return _createPageRoute(
           YoutubePlayerScreen(
             videoId: args['videoId'],
+            startSeconds: args['startSeconds'] as int? ?? 0,
           ),
           settings,
         );

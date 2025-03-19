@@ -7,6 +7,7 @@ import '../screens/board_screen.dart';
 import '../providers/user_data_provider.dart';
 import '../models/user_model.dart';
 import 'package:dba/services/logger_service.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class PostCard extends StatefulWidget {
   final Post post;
@@ -33,6 +34,8 @@ class _PostCardState extends State<PostCard> {
   int _commentCount = 0;
   final _userDataProvider = UserDataProvider.instance;
   bool _isYoutubeVideo = false;
+  String? _youtubeVideoId;
+  YoutubePlayerController? _youtubeController;
 
   @override
   void initState() {
@@ -50,8 +53,26 @@ class _PostCardState extends State<PostCard> {
     if (videoId != null) {
       setState(() {
         _isYoutubeVideo = true;
+        _youtubeVideoId = videoId;
+        _initYoutubeController(videoId);
       });
     }
+  }
+
+  void _initYoutubeController(String videoId) {
+    _youtubeController = YoutubePlayerController(
+      initialVideoId: videoId,
+      flags: const YoutubePlayerFlags(
+        autoPlay: false,
+        mute: false,
+        disableDragSeek: false,
+        loop: false,
+        isLive: false,
+        forceHD: true,
+        enableCaption: false,
+        useHybridComposition: true,
+      ),
+    );
   }
 
   String? _getYouTubeVideoId(List<String> urls) {
@@ -471,55 +492,79 @@ class _PostCardState extends State<PostCard> {
   }
 
   Widget _buildYouTubeThumbnail(BuildContext context) {
-    final videoId = _getYouTubeVideoId(widget.post.mediaUrls);
-    if (videoId == null) return const SizedBox.shrink();
+    if (_youtubeVideoId == null || _youtubeController == null) {
+      return const SizedBox.shrink();
+    }
 
-    return InkWell(
-      onTap: () {
-        Navigator.pushNamed(
-          context,
-          '/youtube-player',
-          arguments: {'videoId': videoId},
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: AspectRatio(
-            aspectRatio: 16 / 9,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Image.network(
-                  'https://img.youtube.com/vi/$videoId/maxresdefault.jpg',
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Image.network(
-                      'https://img.youtube.com/vi/$videoId/hqdefault.jpg',
-                      fit: BoxFit.cover,
-                    );
-                  },
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Column(
+          children: [
+            YoutubePlayer(
+              controller: _youtubeController!,
+              showVideoProgressIndicator: true,
+              progressIndicatorColor: Colors.red,
+              progressColors: const ProgressBarColors(
+                playedColor: Colors.red,
+                handleColor: Colors.redAccent,
+              ),
+              onReady: () {
+                // 플레이어가 준비되었을 때의 콜백
+              },
+              onEnded: (metaData) {
+                // 영상이 종료되었을 때의 콜백
+              },
+              bottomActions: [
+                // 기본 컨트롤러 사용
+                const SizedBox(width: 8.0),
+                const CurrentPosition(),
+                const SizedBox(width: 8.0),
+                const ProgressBar(
+                  isExpanded: true,
+                  colors: ProgressBarColors(
+                    playedColor: Colors.red,
+                    handleColor: Colors.redAccent,
+                  ),
                 ),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow,
+                const SizedBox(width: 8.0),
+                const RemainingDuration(),
+                const SizedBox(width: 8.0),
+                // 커스텀 전체화면 버튼
+                IconButton(
+                  icon: const Icon(
+                    Icons.fullscreen,
                     color: Colors.white,
-                    size: 32,
                   ),
+                  onPressed: () async {
+                    // 현재 재생 위치 가져오기
+                    final position = _youtubeController!.value.position;
+                    final seconds = position.inSeconds;
+
+                    // 플레이어 일시 정지 (전환 중 계속 재생 방지)
+                    _youtubeController!.pause();
+
+                    // 전체화면 스크린으로 이동하면서 현재 재생 위치 전달
+                    if (_youtubeVideoId != null && context.mounted) {
+                      Navigator.pushNamed(
+                        context,
+                        '/youtube-player',
+                        arguments: {
+                          'videoId': _youtubeVideoId,
+                          'startSeconds': seconds,
+                        },
+                      );
+                    }
+                  },
                 ),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -618,6 +663,7 @@ class _PostCardState extends State<PostCard> {
 
   @override
   void dispose() {
+    _youtubeController?.dispose();
     super.dispose();
   }
 

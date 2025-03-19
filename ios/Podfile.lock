@@ -87,6 +87,13 @@ PODS:
     - nanopb (< 2.30911.0, >= 2.30908.0)
     - PromisesSwift (~> 2.1)
   - Flutter (1.0.0)
+  - flutter_inappwebview_ios (0.0.1):
+    - Flutter
+    - flutter_inappwebview_ios/Core (= 0.0.1)
+    - OrderedSet (~> 6.0.3)
+  - flutter_inappwebview_ios/Core (0.0.1):
+    - Flutter
+    - OrderedSet (~> 6.0.3)
   - flutter_local_notifications (0.0.1):
     - Flutter
   - GoogleAppMeasurement (10.25.0):
@@ -148,6 +155,7 @@ PODS:
     - nanopb/encode (= 2.30910.0)
   - nanopb/decode (2.30910.0)
   - nanopb/encode (2.30910.0)
+  - OrderedSet (6.0.3)
   - path_provider_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -179,6 +187,7 @@ DEPENDENCIES:
   - FirebaseCore (~> 10.25.0)
   - FirebaseMessaging (~> 10.25.0)
   - Flutter (from `Flutter`)
+  - flutter_inappwebview_ios (from `.symlinks/plugins/flutter_inappwebview_ios/ios`)
   - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
@@ -204,6 +213,7 @@ SPEC REPOS:
     - GoogleDataTransport
     - GoogleUtilities
     - nanopb
+    - OrderedSet
     - PromisesObjC
     - PromisesSwift
 
@@ -220,6 +230,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/firebase_messaging/ios"
   Flutter:
     :path: Flutter
+  flutter_inappwebview_ios:
+    :path: ".symlinks/plugins/flutter_inappwebview_ios/ios"
   flutter_local_notifications:
     :path: ".symlinks/plugins/flutter_local_notifications/ios"
   image_picker_ios:
@@ -254,12 +266,14 @@ SPEC CHECKSUMS:
   FirebaseRemoteConfigInterop: 6efda51fb5e2f15b16585197e26eaa09574e8a4d
   FirebaseSessions: dbd14adac65ce996228652c1fc3a3f576bdf3ecc
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
+  flutter_inappwebview_ios: b89ba3482b96fb25e00c967aae065701b66e9b99
   flutter_local_notifications: ad39620c743ea4c15127860f4b5641649a988100
   GoogleAppMeasurement: 9abf64b682732fed36da827aa2a68f0221fd2356
   GoogleDataTransport: 6c09b596d841063d76d4288cc2d2f42cc36e1e2a
   GoogleUtilities: ea963c370a38a8069cc5f7ba4ca849a60b6d7d15
   image_picker_ios: 7fe1ff8e34c1790d6fff70a32484959f563a928a
   nanopb: 438bc412db1928dac798aa6fd75726007be04262
+  OrderedSet: e539b66b644ff081c73a262d24ad552a69be3a94
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   PromisesSwift: 9d77319bbe72ebf6d872900551f7eeba9bce2851

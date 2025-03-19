@@ -11,6 +11,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:dba/services/logger_service.dart';
 import 'package:dba/routes/app_routes.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 // MainScreen의 상태를 보존하기 위한 전역 키는 더 이상 필요하지 않음
 // final GlobalKey<State<MainScreen>> mainScreenKey = GlobalKey<State<MainScreen>>();
@@ -32,6 +33,13 @@ void main() async {
   // 최상위 예외 핸들러 설정
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+
+    // 기본적으로는 세로 모드만 허용하지만, 필요할 때 가로 모드도 가능하게 설정
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
 
     // 릴리즈 모드에서 로그 레벨 설정
     if (kReleaseMode) {
