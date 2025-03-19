@@ -7,6 +7,8 @@ import '../services/notification_service.dart';
 import '../constants/supabase_constants.dart';
 import '../services/logger_service.dart';
 import '../screens/main_screen.dart';
+import '../providers/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -284,6 +286,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 테마 제공자를 통해 현재 테마 상태 가져오기
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
+
     return ListenableBuilder(
       listenable: _userDataProvider,
       builder: (context, _) {
@@ -315,10 +321,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
             }
           },
           child: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               image: DecorationImage(
                 image: CachedNetworkImageProvider(
-                  SupabaseConstants.backgroundImage,
+                  isDarkMode
+                      ? SupabaseConstants.backgroundImageDark
+                      : SupabaseConstants.backgroundImage,
                 ),
                 fit: BoxFit.cover,
               ),
@@ -348,16 +356,22 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         floating: true,
                         snap: true,
                         toolbarHeight: 52,
-                        backgroundColor: Colors.white.withAlpha(179),
+                        backgroundColor: isDarkMode
+                            ? Colors.grey.shade900.withAlpha(200)
+                            : Colors.white.withAlpha(179),
                         title: Row(
                           children: [
                             Container(
                               height: 36,
                               decoration: BoxDecoration(
-                                color: Colors.white.withAlpha(179),
+                                color: isDarkMode
+                                    ? Colors.grey.shade800.withAlpha(230)
+                                    : Colors.white.withAlpha(179),
                                 borderRadius: BorderRadius.circular(4),
                                 border: Border.all(
-                                    color: Colors.white.withAlpha(77)),
+                                    color: isDarkMode
+                                        ? Colors.grey.shade700
+                                        : Colors.white.withAlpha(77)),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withAlpha(20),
@@ -376,20 +390,29 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                       value: type['id']!,
                                       child: Text(
                                         type['name']!,
-                                        style: const TextStyle(
-                                            color: Colors.black87),
+                                        style: TextStyle(
+                                            color: isDarkMode
+                                                ? Colors.white
+                                                : Colors.black87),
                                       ),
                                     );
                                   }).toList(),
                                   onChanged: (value) {
                                     _updateMessageType(value!);
                                   },
-                                  dropdownColor: Colors.white.withAlpha(230),
-                                  style: const TextStyle(color: Colors.black87),
-                                  icon: const Icon(
+                                  dropdownColor: isDarkMode
+                                      ? Colors.grey.shade800.withAlpha(230)
+                                      : Colors.white.withAlpha(230),
+                                  style: TextStyle(
+                                      color: isDarkMode
+                                          ? Colors.white
+                                          : Colors.black87),
+                                  icon: Icon(
                                     Icons.arrow_drop_down,
                                     size: 18,
-                                    color: Colors.black87,
+                                    color: isDarkMode
+                                        ? Colors.white
+                                        : Colors.black87,
                                   ),
                                   isDense: true,
                                   padding:
@@ -402,7 +425,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               child: Container(
                                 height: 36,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withAlpha(179),
+                                  color: isDarkMode
+                                      ? Colors.grey.shade800.withAlpha(230)
+                                      : Colors.white.withAlpha(179),
                                   borderRadius: BorderRadius.circular(4),
                                   boxShadow: [
                                     BoxShadow(
@@ -416,22 +441,28 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                   controller: _searchController,
                                   decoration: InputDecoration(
                                     hintText: '검색어를 입력하세요',
-                                    hintStyle: const TextStyle(
+                                    hintStyle: TextStyle(
                                       fontSize: 11,
-                                      color: Colors.black54,
+                                      color: isDarkMode
+                                          ? Colors.grey.shade400
+                                          : Colors.black54,
                                     ),
-                                    prefixIcon: const Icon(
+                                    prefixIcon: Icon(
                                       Icons.search,
                                       size: 18,
-                                      color: Colors.black87,
+                                      color: isDarkMode
+                                          ? Colors.white
+                                          : Colors.black87,
                                     ),
                                     suffixIcon: _searchController
                                             .text.isNotEmpty
                                         ? IconButton(
-                                            icon: const Icon(
+                                            icon: Icon(
                                               Icons.clear,
                                               size: 16,
-                                              color: Colors.black87,
+                                              color: isDarkMode
+                                                  ? Colors.white
+                                                  : Colors.black87,
                                             ),
                                             onPressed: _clearSearch,
                                             padding: const EdgeInsets.all(4),
@@ -439,17 +470,23 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                         : null,
                                     border: OutlineInputBorder(
                                       borderSide: BorderSide(
-                                        color: Colors.white.withAlpha(77),
+                                        color: isDarkMode
+                                            ? Colors.grey.shade700
+                                            : Colors.white.withAlpha(77),
                                       ),
                                     ),
                                     enabledBorder: OutlineInputBorder(
                                       borderSide: BorderSide(
-                                        color: Colors.white.withAlpha(77),
+                                        color: isDarkMode
+                                            ? Colors.grey.shade700
+                                            : Colors.white.withAlpha(77),
                                       ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
                                       borderSide: BorderSide(
-                                        color: Colors.white.withAlpha(130),
+                                        color: isDarkMode
+                                            ? Colors.grey.shade600
+                                            : Colors.white.withAlpha(130),
                                       ),
                                     ),
                                     filled: true,
@@ -464,7 +501,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                   onChanged: (value) {
                                     setState(() {});
                                   },
-                                  style: const TextStyle(color: Colors.black87),
+                                  style: TextStyle(
+                                      color: isDarkMode
+                                          ? Colors.white
+                                          : Colors.black87),
                                 ),
                               ),
                             ),
@@ -475,10 +515,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: _searchController.text.isEmpty
-                                      ? Colors.grey.withAlpha(60)
-                                      : Theme.of(context)
-                                          .primaryColor
-                                          .withAlpha(230),
+                                      ? isDarkMode
+                                          ? Colors.grey.shade700.withAlpha(60)
+                                          : Colors.grey.withAlpha(60)
+                                      : isDarkMode
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                              .withAlpha(200)
+                                          : Theme.of(context)
+                                              .primaryColor
+                                              .withAlpha(230),
                                   borderRadius: BorderRadius.circular(4),
                                   boxShadow: [
                                     BoxShadow(

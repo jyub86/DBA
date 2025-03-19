@@ -12,6 +12,9 @@ import 'package:dba/services/logger_service.dart';
 import 'package:dba/routes/app_routes.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:dba/providers/theme_provider.dart';
+import 'package:dba/constants/theme_constants.dart';
 
 // MainScreen의 상태를 보존하기 위한 전역 키는 더 이상 필요하지 않음
 // final GlobalKey<State<MainScreen>> mainScreenKey = GlobalKey<State<MainScreen>>();
@@ -336,7 +339,12 @@ void main() async {
     // AppRoutes에 알림 화면으로 이동해야 하는지 여부 설정
     AppRoutes.shouldNavigateToNotification = shouldNavigateToNotification;
 
-    runApp(const MyApp());
+    runApp(
+      ChangeNotifierProvider(
+        create: (_) => ThemeProvider(),
+        child: const MyApp(),
+      ),
+    );
   }, (error, stack) {
     // 전역 예외 처리
     LoggerService.error('앱에서 처리되지 않은 예외 발생', error, stack, fatal: true);
@@ -402,6 +410,9 @@ class MyApp extends StatelessWidget {
     // 앱 설정
     AppRoutes.shouldNavigateToNotification = shouldNavigateToNotification;
 
+    // ThemeProvider에 접근
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return MaterialApp(
       title: '부평동부교회',
       debugShowCheckedModeBanner: false,
@@ -422,84 +433,12 @@ class MyApp extends StatelessWidget {
         Locale('ko', 'KR'),
       ],
       locale: const Locale('ko', 'KR'),
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.light,
-        colorScheme: ColorScheme.light(
-          primary: Colors.grey.shade800,
-          onPrimary: Colors.white,
-          secondary: Colors.grey.shade600,
-          onSecondary: Colors.white,
-          surface: Colors.white,
-          error: Colors.red.shade400,
-          onSurface: Colors.grey.shade900,
-        ),
-        scaffoldBackgroundColor: Colors.white,
-        appBarTheme: AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.grey.shade900,
-          elevation: 0,
-          iconTheme: IconThemeData(color: Colors.grey.shade900),
-          actionsIconTheme: IconThemeData(color: Colors.grey.shade900),
-        ),
-        cardTheme: CardTheme(
-          color: Colors.white,
-          elevation: 1,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.grey.shade800,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.grey.shade800,
-          ),
-        ),
-        iconTheme: IconThemeData(
-          color: Colors.grey.shade800,
-        ),
-        textTheme: TextTheme(
-          headlineLarge: TextStyle(
-            color: Colors.grey.shade900,
-            fontWeight: FontWeight.bold,
-          ),
-          headlineMedium: TextStyle(
-            color: Colors.grey.shade900,
-            fontWeight: FontWeight.bold,
-          ),
-          bodyLarge: TextStyle(color: Colors.grey.shade800),
-          bodyMedium: TextStyle(color: Colors.grey.shade700),
-          bodySmall: TextStyle(color: Colors.grey.shade600),
-        ),
-        dividerTheme: DividerThemeData(
-          color: Colors.grey.shade200,
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.grey.shade50,
-          border: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey.shade400),
-          ),
-          labelStyle: TextStyle(color: Colors.grey.shade700),
-          hintStyle: TextStyle(color: Colors.grey.shade500),
-        ),
-      ),
+
+      // 테마 모드와 테마 데이터 적용
+      themeMode: themeProvider.themeMode,
+      theme: ThemeConstants.lightTheme,
+      darkTheme: ThemeConstants.darkTheme,
+
       initialRoute: '/',
       onGenerateRoute: AppRoutes.generateRoute,
     );

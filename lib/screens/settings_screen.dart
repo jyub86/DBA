@@ -10,6 +10,8 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:dba/services/logger_service.dart';
 import '../utils/phone_formatter.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -131,6 +133,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ThemeProvider 접근
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return ListenableBuilder(
       listenable: _userDataProvider,
       builder: (context, _) {
@@ -151,173 +156,208 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-            body: SafeArea(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          // 프로필 이미지 섹션
-                          Stack(
-                            children: [
-                              CircleAvatar(
-                                radius: 50,
-                                backgroundColor:
-                                    Theme.of(context).colorScheme.surface,
-                                backgroundImage: _profileUrl != null
-                                    ? NetworkImage(_profileUrl!)
-                                    : null,
-                                child: _profileUrl == null
-                                    ? Icon(Icons.person,
-                                        size: 50,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface)
-                                    : null,
-                              ),
-                              if (_isLoading)
-                                Positioned.fill(
-                                  child: Container(
-                                    decoration: const BoxDecoration(
-                                      color: Colors.black26,
-                                      shape: BoxShape.circle,
+            body: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 프로필 카드
+                        Card(
+                          margin: const EdgeInsets.only(bottom: 16.0),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    GestureDetector(
+                                      onTap: _pickAndUploadImage,
+                                      child: CircleAvatar(
+                                        radius: 40,
+                                        backgroundColor: Colors.grey.shade200,
+                                        backgroundImage: _profileUrl != null
+                                            ? CachedNetworkImageProvider(
+                                                _profileUrl!,
+                                              )
+                                            : null,
+                                        child: _profileUrl == null
+                                            ? const Icon(
+                                                Icons.person,
+                                                size: 40,
+                                                color: Colors.grey,
+                                              )
+                                            : null,
+                                      ),
                                     ),
-                                    child: const Center(
-                                      child: CircularProgressIndicator(),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            userData.name ?? '이름 없음',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 18,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            userData.email ?? '',
+                                            style: TextStyle(
+                                              color: Colors.grey.shade600,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            userData.phone ?? '전화번호 없음',
+                                            style: TextStyle(
+                                              color: Colors.grey.shade600,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              Positioned(
-                                right: 0,
-                                bottom: 0,
-                                child: GestureDetector(
-                                  onTap:
-                                      _isLoading ? null : _pickAndUploadImage,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context).primaryColor,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.edit,
-                                      size: 20,
-                                      color: Colors.white,
-                                    ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: () =>
+                                      _showProfileEditDialog(context),
+                                  style: ElevatedButton.styleFrom(
+                                    minimumSize: const Size.fromHeight(40),
                                   ),
+                                  child: const Text('프로필 수정'),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            userData.name ?? '이름 없음',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            userData.email ?? '이메일 없음',
-                            style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+
+                        // 환경 설정
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8.0),
+                          child: Text(
+                            '환경 설정',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
-                        ],
-                      ),
-                    ),
-                    const Divider(),
-                    ListTile(
-                      leading: const Icon(Icons.person),
-                      title: const Text('내 정보 변경'),
-                      onTap: () => _showProfileEditDialog(context),
-                    ),
-                    const Divider(),
-                    ListTile(
-                      leading: const Icon(Icons.favorite),
-                      title: const Text('좋아요'),
-                      onTap: () => Navigator.pushNamed(
-                        context,
-                        '/my-liked-posts',
-                      ),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.comment),
-                      title: const Text('댓글'),
-                      onTap: () => Navigator.pushNamed(
-                        context,
-                        '/my-commented-posts',
-                      ),
-                    ),
-                    if (userData.canManage) const Divider(),
-                    if (userData.canManage)
-                      ListTile(
-                        leading: const Icon(Icons.image),
-                        title: const Text('배너 설정'),
-                        subtitle: const Text('관리자 모드'),
-                        onTap: () {
-                          Navigator.pushNamed(
+                        ),
+
+                        // 다크 모드 설정 카드 추가
+                        Card(
+                          margin: const EdgeInsets.only(bottom: 8.0),
+                          child: SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(
+                                  themeProvider.isDarkMode
+                                      ? Icons.dark_mode
+                                      : Icons.light_mode,
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 12),
+                                const Text('다크 모드'),
+                              ],
+                            ),
+                            value: themeProvider.isDarkMode,
+                            onChanged: (value) {
+                              themeProvider.toggleTheme();
+                            },
+                          ),
+                        ),
+
+                        ListTile(
+                          leading: const Icon(Icons.favorite),
+                          title: const Text('좋아요'),
+                          onTap: () => Navigator.pushNamed(
                             context,
-                            '/banner-settings',
-                          );
-                        },
-                      ),
-                    if (userData.canManage)
-                      ListTile(
-                        leading: const Icon(Icons.campaign),
-                        title: const Text('메시지 추가'),
-                        subtitle: const Text('관리자 모드'),
-                        onTap: () => _showAddMessageDialog(context),
-                      ),
-                    if (userData.canManage)
-                      ListTile(
-                        leading: const Icon(Icons.group),
-                        title: const Text('그룹 관리'),
-                        subtitle: const Text('관리자 모드'),
-                        onTap: () {
-                          Navigator.pushNamed(
+                            '/my-liked-posts',
+                          ),
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.comment),
+                          title: const Text('댓글'),
+                          onTap: () => Navigator.pushNamed(
                             context,
-                            '/group-management',
-                          );
-                        },
-                      ),
-                    const Divider(),
-                    ListTile(
-                      leading: const Icon(Icons.help_outline),
-                      title: const Text('문의사항'),
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/inquiry',
-                        );
-                      },
+                            '/my-commented-posts',
+                          ),
+                        ),
+                        if (userData.canManage) const Divider(),
+                        if (userData.canManage)
+                          ListTile(
+                            leading: const Icon(Icons.image),
+                            title: const Text('배너 설정'),
+                            subtitle: const Text('관리자 모드'),
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/banner-settings',
+                              );
+                            },
+                          ),
+                        if (userData.canManage)
+                          ListTile(
+                            leading: const Icon(Icons.campaign),
+                            title: const Text('메시지 추가'),
+                            subtitle: const Text('관리자 모드'),
+                            onTap: () => _showAddMessageDialog(context),
+                          ),
+                        if (userData.canManage)
+                          ListTile(
+                            leading: const Icon(Icons.group),
+                            title: const Text('그룹 관리'),
+                            subtitle: const Text('관리자 모드'),
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/group-management',
+                              );
+                            },
+                          ),
+                        const Divider(),
+                        ListTile(
+                          leading: const Icon(Icons.help_outline),
+                          title: const Text('문의사항'),
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/inquiry',
+                            );
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.description),
+                          title: const Text('이용약관'),
+                          onTap: () => _showTermsDialog(context),
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.privacy_tip),
+                          title: const Text('개인정보 처리방침'),
+                          onTap: () => _showPrivacyDialog(context),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          leading: Icon(Icons.logout,
+                              color: Theme.of(context).colorScheme.error),
+                          title: Text(
+                            '로그아웃',
+                            style: TextStyle(
+                                color: Theme.of(context).colorScheme.error),
+                          ),
+                          onTap: () => _handleLogout(context),
+                        ),
+                      ],
                     ),
-                    ListTile(
-                      leading: const Icon(Icons.description),
-                      title: const Text('이용약관'),
-                      onTap: () => _showTermsDialog(context),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.privacy_tip),
-                      title: const Text('개인정보 처리방침'),
-                      onTap: () => _showPrivacyDialog(context),
-                    ),
-                    const Divider(),
-                    ListTile(
-                      leading: Icon(Icons.logout,
-                          color: Theme.of(context).colorScheme.error),
-                      title: Text(
-                        '로그아웃',
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.error),
-                      ),
-                      onTap: () => _handleLogout(context),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                  ),
           ),
         );
       },

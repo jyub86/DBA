@@ -16,6 +16,8 @@ import '../providers/user_data_provider.dart';
 import '../constants/supabase_constants.dart';
 import '../services/logger_service.dart';
 import 'webview_screen.dart';
+import '../providers/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class MainScreen extends StatefulWidget {
   final int initialIndex;
@@ -45,13 +47,12 @@ class MainScreenState extends State<MainScreen> {
   DateTime? _lastBackPressTime;
 
   // 배경 이미지 로딩 상태 추적
-  bool _isBackgroundLoaded = false;
-
   // 데이터가 이미 로드되었는지 추적하는 전역 변수
   static bool _globalDataLoaded = false;
   static List<CategoryModel> _globalCategories = [];
   static List<BannerModel> _globalBanners = [];
   static bool _globalBackgroundLoaded = false;
+  static bool _globalDarkBackgroundLoaded = false;
 
   // 인덱스 업데이트 메서드 (public으로 변경)
   void updateIndex(int index, int? categoryId) {
@@ -67,6 +68,33 @@ class MainScreenState extends State<MainScreen> {
     }
   }
 
+  // 추가: 라이트/다크 모드 배경 이미지 모두 캐시
+  void _cacheBackgroundImages() {
+    // 라이트 모드 이미지 캐시
+    precacheImage(
+      const CachedNetworkImageProvider(SupabaseConstants.backgroundImage),
+      context,
+    ).then((_) {
+      if (mounted) {
+        setState(() {
+          _globalBackgroundLoaded = true;
+        });
+      }
+
+      // 다크 모드 이미지 캐시 (라이트 모드 이미지 로딩 완료 후 순차적으로)
+      precacheImage(
+        const CachedNetworkImageProvider(SupabaseConstants.backgroundImageDark),
+        context,
+      ).then((_) {
+        if (mounted) {
+          setState(() {
+            _globalDarkBackgroundLoaded = true;
+          });
+        }
+      });
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -74,27 +102,16 @@ class MainScreenState extends State<MainScreen> {
 
     // 배경 이미지를 미리 캐싱하고 로딩 상태 관리 개선
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 테마 제공자를 통해 현재 테마 상태 가져오기
+      final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+      final isDarkMode = themeProvider.isDarkMode;
+
       // 배경 이미지가 이미 로드된 경우 상태 업데이트
-      if (_globalBackgroundLoaded) {
-        if (mounted) {
-          setState(() {
-            _isBackgroundLoaded = true;
-          });
-        }
+      if (isDarkMode ? _globalDarkBackgroundLoaded : _globalBackgroundLoaded) {
+        // 이미 로드된 상태라면 아무것도 하지 않음
       } else {
-        // 배경 이미지가 아직 로드되지 않은 경우에만 캐싱
-        precacheImage(
-          const CachedNetworkImageProvider(SupabaseConstants.backgroundImage),
-          context,
-        ).then((_) {
-          if (mounted) {
-            setState(() {
-              // 배경 이미지가 캐시되었음을 표시
-              _isBackgroundLoaded = true;
-              _globalBackgroundLoaded = true;
-            });
-          }
-        });
+        // 배경 이미지를 모두 캐시 (라이트/다크)
+        _cacheBackgroundImages();
       }
 
       // 데이터가 이미 로드된 경우 전역 데이터 사용
@@ -338,18 +355,31 @@ class MainScreenState extends State<MainScreen> {
           ),
         ];
 
+        final themeProvider = Provider.of<ThemeProvider>(context);
+        final isDarkMode = themeProvider.isDarkMode;
+
+        // 모드에 따라 적절한 배경 이미지 로드 여부 결정
+        final isAppropriateBackgroundLoaded =
+            isDarkMode ? _globalDarkBackgroundLoaded : _globalBackgroundLoaded;
+
         // 배경 이미지와 콘텐츠를 함께 로드하여 깜빡임 방지
         final Widget content = Container(
           decoration: BoxDecoration(
-            image: _isBackgroundLoaded
-                ? const DecorationImage(
+            image: isAppropriateBackgroundLoaded
+                ? DecorationImage(
                     image: CachedNetworkImageProvider(
-                      SupabaseConstants.backgroundImage,
+                      isDarkMode
+                          ? SupabaseConstants.backgroundImageDark
+                          : SupabaseConstants.backgroundImage,
                     ),
                     fit: BoxFit.cover,
                   )
                 : null,
-            color: _isBackgroundLoaded ? null : Colors.white,
+            color: isAppropriateBackgroundLoaded
+                ? null
+                : isDarkMode
+                    ? Theme.of(context).colorScheme.surface
+                    : Colors.white,
           ),
           child: Scaffold(
             backgroundColor: Colors.transparent,
@@ -395,6 +425,7 @@ class MainScreenState extends State<MainScreen> {
         final isLandscape = constraints.maxWidth > constraints.maxHeight;
         final padding = isLandscape ? 8.0 : 16.0;
         final bannerAspectRatio = isLandscape ? 21 / 9 : 16 / 9;
+        final themeProvider = Provider.of<ThemeProvider>(context);
 
         return SingleChildScrollView(
           child: Column(
@@ -408,6 +439,8 @@ class MainScreenState extends State<MainScreen> {
                     Image.asset(
                       'assets/images/church_logo.png',
                       height: 30,
+                      // 다크모드일 때 로고 밝기 조정
+                      color: themeProvider.isDarkMode ? Colors.white : null,
                     ),
                     const SizedBox(width: 8),
                   ],
@@ -421,14 +454,18 @@ class MainScreenState extends State<MainScreen> {
                     aspectRatio: bannerAspectRatio,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: themeProvider.isDarkMode
+                            ? Colors.grey[800]
+                            : Colors.grey[200],
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Text(
                           '등록된 배너가 없습니다',
                           style: TextStyle(
-                            color: Colors.grey,
+                            color: themeProvider.isDarkMode
+                                ? Colors.grey[400]
+                                : Colors.grey,
                             fontSize: 16,
                           ),
                         ),

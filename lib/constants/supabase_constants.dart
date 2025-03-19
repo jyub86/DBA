@@ -10,4 +10,6 @@ class SupabaseConstants {
   // 백그라운드 이미지
   static const String backgroundImage =
       'https://nfivyduwknskpfhuyzeg.supabase.co/storage/v1/object/public/utils//background.jpg';
+  static const String backgroundImageDark =
+      'https://nfivyduwknskpfhuyzeg.supabase.co/storage/v1/object/public/utils//background_dark.jpg';
 }

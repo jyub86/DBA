@@ -9,6 +9,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../constants/supabase_constants.dart';
 import '../services/logger_service.dart';
 import '../screens/main_screen.dart';
+import '../providers/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class BoardScreen extends StatefulWidget {
   final int? initialCategoryId;
@@ -207,6 +209,10 @@ class BoardScreenState extends State<BoardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 테마 제공자를 통해 현재 테마 상태 가져오기
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
+
     return ListenableBuilder(
       listenable: _userDataProvider,
       builder: (context, _) {
@@ -239,198 +245,220 @@ class BoardScreenState extends State<BoardScreen> {
             }
           },
           child: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               image: DecorationImage(
                 image: CachedNetworkImageProvider(
-                  SupabaseConstants.backgroundImage,
+                  isDarkMode
+                      ? SupabaseConstants.backgroundImageDark
+                      : SupabaseConstants.backgroundImage,
                 ),
                 fit: BoxFit.cover,
               ),
             ),
             child: Scaffold(
               backgroundColor: Colors.transparent,
-              body: RefreshIndicator(
-                onRefresh: () async {
-                  if (mounted) {
+              body: NotificationListener<ScrollNotification>(
+                onNotification: (scrollNotification) {
+                  if (scrollNotification is ScrollUpdateNotification) {
+                    setState(() {
+                      _showScrollToTop = _scrollController.offset > 300;
+                    });
+                  }
+                  return false;
+                },
+                child: RefreshIndicator(
+                  onRefresh: () async {
                     setState(() {
                       _posts.clear();
                       _hasMore = true;
                     });
-                  }
-                  await _loadPosts();
-                },
-                child: CustomScrollView(
-                  controller: _scrollController,
-                  slivers: [
-                    SliverAppBar(
-                      pinned: false,
-                      floating: true,
-                      snap: true,
-                      toolbarHeight: 52,
-                      backgroundColor: Colors.white.withAlpha(179),
-                      title: Row(
-                        children: [
-                          Container(
-                            height: 36,
+                    await _loadPosts();
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDarkMode
+                          ? Colors.black12
+                          : Colors.black.withAlpha(20),
+                    ),
+                    child: CustomScrollView(
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        SliverAppBar(
+                          pinned: true,
+                          floating: false,
+                          expandedHeight: 0,
+                          backgroundColor: Colors.transparent,
+                          flexibleSpace: Container(
+                            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
                             decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(179),
-                              borderRadius: BorderRadius.circular(4),
-                              border:
-                                  Border.all(color: Colors.white.withAlpha(77)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(20),
-                                  spreadRadius: 1,
-                                  blurRadius: 3,
+                              color: isDarkMode
+                                  ? Colors.black.withAlpha(120)
+                                  : Colors.white.withAlpha(80),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  height: 36,
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: isDarkMode
+                                        ? Colors.grey.shade800.withAlpha(230)
+                                        : Colors.white.withAlpha(230),
+                                    borderRadius: BorderRadius.circular(4),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withAlpha(20),
+                                        spreadRadius: 1,
+                                        blurRadius: 3,
+                                      ),
+                                    ],
+                                  ),
+                                  child: DropdownButton<int>(
+                                    value: _selectedCategoryId,
+                                    items: _categories.map((category) {
+                                      return DropdownMenuItem<int>(
+                                        value: category.id,
+                                        child: Text(
+                                          category.name,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) {
+                                      updateCategory(value!);
+                                    },
+                                    dropdownColor: isDarkMode
+                                        ? Colors.grey.shade800.withAlpha(230)
+                                        : Colors.white.withAlpha(230),
+                                    style: TextStyle(
+                                      color: isDarkMode
+                                          ? Colors.white
+                                          : Colors.black87,
+                                    ),
+                                    icon: Icon(
+                                      Icons.arrow_drop_down,
+                                      size: 18,
+                                      color: isDarkMode
+                                          ? Colors.white
+                                          : Colors.black87,
+                                    ),
+                                    isDense: true,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4),
+                                    underline: Container(height: 0),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Container(
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: isDarkMode
+                                          ? Colors.grey.shade800.withAlpha(230)
+                                          : Colors.white.withAlpha(179),
+                                      borderRadius: BorderRadius.circular(4),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withAlpha(20),
+                                          spreadRadius: 1,
+                                          blurRadius: 3,
+                                        ),
+                                      ],
+                                    ),
+                                    child: TextField(
+                                      controller: _searchController,
+                                      decoration: InputDecoration(
+                                        hintText: '검색어를 입력하세요',
+                                        hintStyle: TextStyle(
+                                          fontSize: 11,
+                                          color: isDarkMode
+                                              ? Colors.grey.shade400
+                                              : Colors.black54,
+                                        ),
+                                        prefixIcon: Icon(
+                                          Icons.search,
+                                          size: 18,
+                                          color: isDarkMode
+                                              ? Colors.white
+                                              : Colors.black87,
+                                        ),
+                                        suffixIcon:
+                                            _searchController.text.isNotEmpty
+                                                ? IconButton(
+                                                    icon: Icon(
+                                                      Icons.clear,
+                                                      size: 16,
+                                                      color: isDarkMode
+                                                          ? Colors.white
+                                                          : Colors.black87,
+                                                    ),
+                                                    onPressed: _clearSearch,
+                                                    padding:
+                                                        const EdgeInsets.all(4),
+                                                  )
+                                                : null,
+                                        border: OutlineInputBorder(
+                                          borderSide: BorderSide(
+                                            color: isDarkMode
+                                                ? Colors.grey.shade700
+                                                : Colors.white.withAlpha(77),
+                                          ),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderSide: BorderSide(
+                                            color: isDarkMode
+                                                ? Colors.grey.shade700
+                                                : Colors.white.withAlpha(77),
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderSide: BorderSide(
+                                            color: isDarkMode
+                                                ? Colors.grey.shade600
+                                                : Colors.white.withAlpha(128),
+                                          ),
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.transparent,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                          vertical: 0,
+                                          horizontal: 8,
+                                        ),
+                                        isDense: true,
+                                      ),
+                                      onSubmitted: (_) => _performSearch(),
+                                      onChanged: (value) {
+                                        setState(() {});
+                                      },
+                                      style: TextStyle(
+                                        color: isDarkMode
+                                            ? Colors.white
+                                            : Colors.black87,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<int>(
-                                value: _selectedCategoryId,
-                                items: _categories.map((category) {
-                                  return DropdownMenuItem<int>(
-                                    value: category.id,
-                                    child: Text(
-                                      category.name,
-                                      style: const TextStyle(
-                                          color: Colors.black87),
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  updateCategory(value!);
-                                },
-                                dropdownColor: Colors.white.withAlpha(230),
-                                style: const TextStyle(color: Colors.black87),
-                                icon: const Icon(
-                                  Icons.arrow_drop_down,
-                                  size: 18,
-                                  color: Colors.black87,
-                                ),
-                                isDense: true,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 4),
-                              ),
-                            ),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Container(
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withAlpha(179),
-                                borderRadius: BorderRadius.circular(4),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withAlpha(20),
-                                    spreadRadius: 1,
-                                    blurRadius: 3,
-                                  ),
-                                ],
-                              ),
-                              child: TextField(
-                                controller: _searchController,
-                                decoration: InputDecoration(
-                                  hintText: '검색어를 입력하세요',
-                                  hintStyle: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.black54,
-                                  ),
-                                  prefixIcon: const Icon(
-                                    Icons.search,
-                                    size: 18,
-                                    color: Colors.black87,
-                                  ),
-                                  suffixIcon: _searchController.text.isNotEmpty
-                                      ? IconButton(
-                                          icon: const Icon(
-                                            Icons.clear,
-                                            size: 16,
-                                            color: Colors.black87,
-                                          ),
-                                          onPressed: _clearSearch,
-                                          padding: const EdgeInsets.all(4),
-                                        )
-                                      : null,
-                                  border: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: Colors.white.withAlpha(77),
-                                    ),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: Colors.white.withAlpha(77),
-                                    ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: Colors.white.withAlpha(128),
-                                    ),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.transparent,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 0,
-                                    horizontal: 8,
-                                  ),
-                                  isDense: true,
-                                ),
-                                onSubmitted: (_) => _performSearch(),
-                                onChanged: (value) {
-                                  setState(() {});
-                                },
-                                style: const TextStyle(color: Colors.black87),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          SizedBox(
-                            height: 36,
-                            width: 36,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: _searchController.text.isEmpty
-                                    ? Colors.grey.withAlpha(77)
-                                    : Theme.of(context)
-                                        .primaryColor
-                                        .withAlpha(230),
-                                borderRadius: BorderRadius.circular(4),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withAlpha(20),
-                                    spreadRadius: 1,
-                                    blurRadius: 3,
-                                  ),
-                                ],
-                              ),
-                              child: IconButton(
-                                onPressed: _searchController.text.isEmpty
-                                    ? null
-                                    : _performSearch,
-                                icon: const Icon(
-                                  Icons.search,
-                                  size: 18,
-                                  color: Colors.white,
-                                ),
-                                padding: EdgeInsets.zero,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_searchQuery?.isNotEmpty == true)
-                      SliverPersistentHeader(
-                        pinned: true,
-                        delegate: _SearchResultHeaderDelegate(
-                          searchQuery: _searchQuery!,
-                          onClear: _clearSearch,
                         ),
-                      ),
-                    _buildPostList(),
-                  ],
+                        if (_searchQuery?.isNotEmpty == true)
+                          SliverPersistentHeader(
+                            pinned: true,
+                            delegate: _SearchResultHeaderDelegate(
+                              searchQuery: _searchQuery!,
+                              onClear: _clearSearch,
+                            ),
+                          ),
+                        _buildPostList(),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               floatingActionButton: AnimatedOpacity(

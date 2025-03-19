@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../providers/user_data_provider.dart';
+import '../providers/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class CustomBottomNavigationBar extends StatelessWidget {
   final int currentIndex;
@@ -13,6 +15,10 @@ class CustomBottomNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 테마 제공자를 통해 현재 테마 상태 가져오기
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
+
     return ListenableBuilder(
       listenable: UserDataProvider.instance,
       builder: (context, _) {
@@ -23,10 +29,15 @@ class CustomBottomNavigationBar extends StatelessWidget {
 
         return Container(
           decoration: BoxDecoration(
-            color: Colors.white.withAlpha(179),
+            // 다크모드에 따라 배경색 변경
+            color: isDarkMode
+                ? Theme.of(context).colorScheme.surface.withAlpha(230)
+                : Colors.white.withAlpha(179),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(26),
+                color: isDarkMode
+                    ? Colors.black.withAlpha(50)
+                    : Colors.black.withAlpha(26),
                 blurRadius: 10,
                 offset: const Offset(0, -5),
               ),
@@ -36,7 +47,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
             selectedIndex: currentIndex,
             onDestinationSelected: onIndexChanged,
             backgroundColor: Colors.transparent,
-            indicatorColor: Theme.of(context).primaryColor.withAlpha(26),
+            indicatorColor: Theme.of(context).colorScheme.primary.withAlpha(26),
             destinations: const [
               NavigationDestination(
                 icon: Icon(Icons.home_outlined),
