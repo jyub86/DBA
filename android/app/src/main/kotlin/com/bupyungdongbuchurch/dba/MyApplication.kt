@@ -13,6 +13,10 @@ class MyApplication : Application() {
         super.onCreate()
         
         try {
+            Log.d("FlutterApp", "Application 초기화 성공")
+            
+            // 사전 엔진 초기화 비활성화 (문제 해결을 위해)
+            /* 
             // Flutter 엔진 초기화
             flutterEngine = FlutterEngine(this)
             
@@ -31,9 +35,11 @@ class MyApplication : Application() {
             FlutterEngineCache.getInstance().put("my_engine_id", flutterEngine)
             
             Log.d("FlutterApp", "Flutter 엔진 초기화 성공")
+            */
         } catch (e: Exception) {
             Log.e("FlutterApp", "Flutter 엔진 초기화 실패", e)
-            // 예외 발생 시 복구 시도
+            // 예외 발생 시 복구 시도 비활성화
+            /*
             try {
                 flutterEngine = FlutterEngine(this)
                 FlutterEngineCache.getInstance().put("my_engine_id", flutterEngine)
@@ -41,6 +47,7 @@ class MyApplication : Application() {
             } catch (e2: Exception) {
                 Log.e("FlutterApp", "Flutter 엔진 복구 실패", e2)
             }
+            */
         }
     }
 } 
