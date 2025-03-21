@@ -110,7 +110,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       // custom_users 테이블에 사용자 정보 추가
       await supabase.from('custom_users').insert({
         'auth_id': currentUser.id,
-        'name': widget.name,
+        'name': widget.name ?? '이름 없음',
         'email': widget.email,
         'role': 4, // 기본 사용자 역할
         'active': true,

@@ -118,6 +118,15 @@ class AuthService {
 
       if (existingUser == null) {
         // custom_users에 데이터가 없는 경우에만 회원가입 화면으로 이동
+        String? userName = user.userMetadata?['name'] as String?;
+
+        // 애플 로그인의 경우 이름이 null일 수 있음
+        if (userName == null &&
+            user.identities?.any((identity) => identity.provider == 'apple') ==
+                true) {
+          LoggerService.info('애플 로그인: 이름 정보 없음');
+        }
+
         if (!context.mounted) return;
         Navigator.pushReplacement(
           context,
@@ -125,7 +134,7 @@ class AuthService {
             builder: (context) => SignUpScreen(
               email: user.email ?? '',
               profileUrl: '',
-              name: user.userMetadata?['name'] as String?,
+              name: userName,
             ),
           ),
         );
@@ -396,6 +405,10 @@ class AuthService {
       if (credential.identityToken == null) {
         throw Exception('애플 로그인 인증 토큰을 받지 못했습니다.');
       }
+
+      // 애플 로그인에서 이름 정보 로깅
+      LoggerService.info(
+          '애플 로그인 이름 정보: ${credential.givenName ?? "없음"} ${credential.familyName ?? ""}');
 
       // Supabase Apple 로그인 실행
       final response = await Supabase.instance.client.auth.signInWithIdToken(

@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../services/auth_service.dart';
-import '../providers/user_data_provider.dart';
-import '../constants/terms_constants.dart';
-import '../widgets/add_message_dialog.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:io';
-import 'package:path/path.dart' as path;
-import 'package:dba/services/logger_service.dart';
+import 'dart:async';
+import '../providers/user_data_provider.dart';
+import '../constants/terms_constants.dart';
+import '../widgets/add_message_dialog.dart';
+import '../services/logger_service.dart';
+import '../services/auth_service.dart';
 import '../utils/phone_formatter.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
+import 'package:path/path.dart' as path;
+
+// 애니메이션이 중복으로 발생하는 문제를 방지하기 위한 글로벌 키
+final settingsScreenGlobalKey = GlobalKey();
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -228,21 +232,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     children: [
                                       GestureDetector(
                                         onTap: _pickAndUploadImage,
-                                        child: CircleAvatar(
-                                          radius: 40,
-                                          backgroundColor: Colors.grey.shade200,
-                                          backgroundImage: _profileUrl != null
-                                              ? CachedNetworkImageProvider(
-                                                  _profileUrl!,
-                                                )
-                                              : null,
-                                          child: _profileUrl == null
-                                              ? const Icon(
-                                                  Icons.person,
-                                                  size: 40,
-                                                  color: Colors.grey,
-                                                )
-                                              : null,
+                                        child: Stack(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 40,
+                                              backgroundColor:
+                                                  Colors.grey.shade200,
+                                              backgroundImage: _profileUrl !=
+                                                      null
+                                                  ? CachedNetworkImageProvider(
+                                                      _profileUrl!,
+                                                    )
+                                                  : null,
+                                              child: _profileUrl == null
+                                                  ? const Icon(
+                                                      Icons.person,
+                                                      size: 40,
+                                                      color: Colors.grey,
+                                                    )
+                                                  : null,
+                                            ),
+                                            Positioned(
+                                              right: 0,
+                                              bottom: 0,
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.all(4),
+                                                decoration: BoxDecoration(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primary,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.edit,
+                                                  size: 16,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                       const SizedBox(width: 16),
@@ -309,23 +338,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         // 다크 모드 설정 카드 추가
                         Card(
                           margin: const EdgeInsets.only(bottom: 8.0),
-                          child: SwitchListTile(
-                            title: Row(
-                              children: [
-                                Icon(
-                                  themeProvider.isDarkMode
-                                      ? Icons.dark_mode
-                                      : Icons.light_mode,
-                                  size: 22,
-                                ),
-                                const SizedBox(width: 12),
-                                const Text('다크 모드'),
-                              ],
+                          child: ListTile(
+                            leading: Icon(
+                              themeProvider.isDarkMode
+                                  ? Icons.dark_mode
+                                  : Icons.light_mode,
+                              size: 22,
                             ),
-                            value: themeProvider.isDarkMode,
-                            onChanged: (value) {
-                              themeProvider.toggleTheme();
-                            },
+                            title: const Text('다크 모드'),
+                            trailing: Switch(
+                              value: themeProvider.isDarkMode,
+                              onChanged: (value) {
+                                themeProvider.toggleTheme();
+                              },
+                            ),
                           ),
                         ),
 
@@ -433,10 +459,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final dialogWidth = screenWidth * 0.9;
 
+    // 프로필 수정 관련 임시 상태 관리를 위한 key
+    final GlobalKey profileDialogKey = GlobalKey();
+
     return showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (profileDialogContext) => StatefulBuilder(
-        builder: (context, setState) => Dialog(
+        key: profileDialogKey,
+        builder: (context, setBuilderState) => Dialog(
           child: SizedBox(
             width: dialogWidth,
             child: Padding(
@@ -491,29 +522,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            Row(
-                              children: [
-                                Text(
-                                  isInfoPublic ? '공개' : '비공개',
-                                  style: TextStyle(
-                                    color: isInfoPublic
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Switch(
-                                  value: isInfoPublic,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      isInfoPublic = value;
-                                    });
-                                  },
-                                ),
-                              ],
+                            Text(
+                              isInfoPublic ? '공개' : '비공개',
+                              style: TextStyle(
+                                color: isInfoPublic
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Switch(
+                              value: isInfoPublic,
+                              onChanged: (value) {
+                                setBuilderState(() {
+                                  isInfoPublic = value;
+                                });
+                              },
                             ),
                           ],
                         ),
@@ -723,11 +750,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     bool understood = false;
     bool isLoading = false;
 
+    // 계정 삭제 다이얼로그 관련 임시 상태 관리를 위한 key
+    final GlobalKey deleteDialogKey = GlobalKey();
+
     return showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setState) => WillPopScope(
+        key: deleteDialogKey,
+        builder: (context, setBuilderState) => WillPopScope(
           onWillPop: () async => !isLoading,
           child: AlertDialog(
             title: Row(
@@ -770,7 +801,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Checkbox(
                             value: understood,
                             onChanged: (value) {
-                              setState(() {
+                              setBuilderState(() {
                                 understood = value ?? false;
                               });
                             },
@@ -795,7 +826,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     TextButton(
                       onPressed: understood
                           ? () async {
-                              setState(() {
+                              setBuilderState(() {
                                 isLoading = true;
                               });
 
