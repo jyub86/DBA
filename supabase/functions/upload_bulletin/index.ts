@@ -130,7 +130,6 @@ async function fetchLatestBulletinPdf(): Promise<{ pdfUrl: string; title: string
       // 게시물 URL에서 ID 추출
       const postIdMatch = postUrl.match(/\/(\d+)\/$/);
       if (postIdMatch && postIdMatch[1]) {
-        const postId = postIdMatch[1];
         const year = new Date().getFullYear();
         const month = (new Date().getMonth() + 1).toString().padStart(2, '0');
         const day = new Date().getDate().toString().padStart(2, '0');
@@ -396,6 +395,33 @@ async function uploadImagesToSupabase(imagePaths: string[]): Promise<string[]> {
   return uploadedUrls;
 }
 
+
+/**
+ * 동일한 제목의 게시물이 있는지 확인하는 함수
+ * @param title 게시물 제목
+ * @returns 존재하는 게시물 ID, 없으면 null
+ */
+async function checkExistingPost(title: string): Promise<number | null> {
+  try {
+    // 1. 동일한 제목의 게시물이 있는지 확인
+    const { data: existingPosts } = await supabase
+      .from('posts')
+      .select('id')
+      .eq('title', title)
+      .single();
+    
+    if (existingPosts) {
+      console.log(`동일한 제목의 게시물이 이미 존재합니다: ${title}`);
+      return existingPosts.id;
+    } else {
+      console.log(`동일한 제목의 게시물이 없습니다: ${title}`);
+      return null;
+    }
+  } catch (error) {
+    console.error("게시물 조회 중 오류 발생:", error);
+    return null;  
+  }
+}
 /**
  * 주보 이미지를 게시물로 등록하는 함수
  * @param imageUrls 업로드된 이미지 URL 목록
@@ -449,6 +475,17 @@ async function processPdfAndUpload(pdfPath: string, outputDir: string, title: st
   try {
     // 1. PDF를 이미지로 변환
     const imagePaths = await pdfToSplitImages(pdfPath, outputDir);
+
+    // 2. 동일한 제목의 게시물이 있는지 확인
+    const existedId = await checkExistingPost(title);
+    if (existedId) {
+      return {
+        success: true,
+        message: `동일한 제목의 게시물이 이미 존재합니다: ${title}`,
+        existedId,
+        imageUrls: []
+      };
+    }
     
     // 2. 이미지를 Supabase에 업로드
     const imageUrls = await uploadImagesToSupabase(imagePaths);
@@ -831,3 +868,5 @@ if (import.meta.main) {
     Deno.exit(1);
   }
 }
+
+// deno run --allow-read --allow-write --allow-net supabase/functions/upload_bulletin/index.ts
