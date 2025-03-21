@@ -98,6 +98,16 @@ class _PostCardState extends State<PostCard> {
 
   Future<void> _checkIfLiked() async {
     try {
+      // 게스트 모드면 항상 좋아요 안 한 상태로 설정
+      if (_userDataProvider.isGuestMode) {
+        if (mounted) {
+          setState(() {
+            _isLiked = false;
+          });
+        }
+        return;
+      }
+
       final userData = _userDataProvider.userData;
       if (userData == null) return;
 
@@ -167,6 +177,30 @@ class _PostCardState extends State<PostCard> {
 
   Future<void> _toggleLike() async {
     try {
+      // 게스트 모드 체크
+      if (_userDataProvider.isGuestMode) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('로그인 후 좋아요 기능을 이용할 수 있습니다.'),
+              behavior: SnackBarBehavior.floating,
+              action: SnackBarAction(
+                label: '로그인',
+                onPressed: () {
+                  _userDataProvider.clear();
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/login',
+                    (route) => false,
+                  );
+                },
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
       final userData = _userDataProvider.userData;
       if (userData == null) return;
 
@@ -215,6 +249,28 @@ class _PostCardState extends State<PostCard> {
   }
 
   void _showComments() {
+    // 게스트 모드 체크
+    if (_userDataProvider.isGuestMode) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('로그인 후 댓글 기능을 이용할 수 있습니다.'),
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: '로그인',
+            onPressed: () {
+              _userDataProvider.clear();
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/login',
+                (route) => false,
+              );
+            },
+          ),
+        ),
+      );
+      return;
+    }
+
     Navigator.pushNamed(
       context,
       '/comments',

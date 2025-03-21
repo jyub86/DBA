@@ -94,9 +94,7 @@ class AppRoutes {
     switch (settings.name) {
       case '/':
         return _createPageRoute(
-          shouldNavigateToNotification
-              ? const MainScreen(initialIndex: 3)
-              : const LoginScreen(),
+          const LoginScreen(),
           settings,
         );
 

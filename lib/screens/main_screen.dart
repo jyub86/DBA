@@ -306,17 +306,80 @@ class MainScreenState extends State<MainScreen> {
           );
         }
 
+        // 로그인 유도 화면을 구축하는 함수
+        Widget buildLoginRequiredScreen(String feature) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.login_rounded,
+                    size: 60,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    '$feature 기능을 사용하려면\n로그인이 필요합니다',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '로그인하시면 더 많은 기능을\n사용하실 수 있습니다.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      // 로그아웃 처리
+                      _userDataProvider.clear();
+                      // 로그인 화면으로 이동
+                      Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        '/login',
+                        (route) => false,
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 40,
+                        vertical: 12,
+                      ),
+                    ),
+                    child: const Text('로그인하기'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         final List<Widget> screens = [
           _buildHomeScreen(),
           BoardScreen(
             key: _boardKey,
             initialCategoryId: widget.initialCategoryId,
           ),
+          // 글쓰기 화면: 게스트 모드 또는 조건 미충족 시 제한
           Builder(
             builder: (context) {
+              // 게스트 모드인 경우 로그인 유도 화면 표시
+              if (_userDataProvider.isGuestMode) {
+                return buildLoginRequiredScreen('글쓰기');
+              }
+
+              // 실제 로그인 사용자인 경우 기존 조건 확인
               if (userData.isInfoPublic && (userData.member ?? false)) {
                 return const CreatePostScreen();
               }
+
+              // 조건 미충족 시 기존 제한 화면 표시
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -356,7 +419,17 @@ class MainScreenState extends State<MainScreen> {
               );
             },
           ),
-          const NotificationScreen(),
+          // 알림 화면: 게스트 모드 시 제한
+          Builder(
+            builder: (context) {
+              // 게스트 모드인 경우 로그인 유도 화면 표시
+              if (_userDataProvider.isGuestMode) {
+                return buildLoginRequiredScreen('알림');
+              }
+              // 로그인한 사용자는 알림 화면 접근 가능
+              return const NotificationScreen();
+            },
+          ),
           Builder(
             builder: (context) => IconButton(
               icon: const Icon(Icons.menu),
@@ -599,13 +672,46 @@ class MainScreenState extends State<MainScreen> {
                         final userData = _userDataProvider.userData;
                         final isMember = userData?.member ?? false;
                         final isInfoPublic = userData?.isInfoPublic ?? false;
+                        final isGuest = _userDataProvider.isGuestMode;
 
                         return _buildMenuButton(
                           label: '연락처',
                           iconUrl:
                               'https://nfivyduwknskpfhuyzeg.supabase.co/storage/v1/object/public/icons//address.png',
                           onTap: () {
-                            if (!isMember) {
+                            // 게스트 모드 체크를 가장 먼저 수행
+                            if (isGuest) {
+                              // 로그인이 필요하다는 다이얼로그 표시
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('로그인 필요'),
+                                  content: const Text(
+                                      '교인 연락처 기능을 사용하려면 로그인이 필요합니다.'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(),
+                                      child: const Text('취소'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                        // 로그아웃 처리
+                                        _userDataProvider.clear();
+                                        // 로그인 화면으로 이동
+                                        Navigator.pushNamedAndRemoveUntil(
+                                          context,
+                                          '/login',
+                                          (route) => false,
+                                        );
+                                      },
+                                      child: const Text('로그인하기'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            } else if (!isMember) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('교인 인증 후 사용 가능한 기능입니다.'),

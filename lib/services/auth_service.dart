@@ -155,6 +155,12 @@ class AuthService {
 
   /// FCM 초기화를 지연 실행
   void _initializeFCMLater() {
+    // 게스트 모드인 경우 FCM 초기화 하지 않음
+    if (_userDataProvider.isGuestMode) {
+      LoggerService.info('게스트 모드: FCM 초기화 생략');
+      return;
+    }
+
     Future.delayed(const Duration(seconds: 1), () async {
       try {
         await _fcmService.initialize().timeout(

@@ -135,6 +135,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     // ThemeProvider 접근
     final themeProvider = Provider.of<ThemeProvider>(context);
+    // 게스트 모드 확인
+    final isGuestMode = _userDataProvider.isGuestMode;
 
     return ListenableBuilder(
       listenable: _userDataProvider,
@@ -163,82 +165,134 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 프로필 카드
-                        Card(
-                          margin: const EdgeInsets.only(bottom: 16.0),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    GestureDetector(
-                                      onTap: _pickAndUploadImage,
-                                      child: CircleAvatar(
-                                        radius: 40,
-                                        backgroundColor: Colors.grey.shade200,
-                                        backgroundImage: _profileUrl != null
-                                            ? CachedNetworkImageProvider(
-                                                _profileUrl!,
-                                              )
-                                            : null,
-                                        child: _profileUrl == null
-                                            ? const Icon(
-                                                Icons.person,
-                                                size: 40,
-                                                color: Colors.grey,
-                                              )
-                                            : null,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            userData.name ?? '이름 없음',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 18,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            userData.email ?? '',
-                                            style: TextStyle(
-                                              color: Colors.grey.shade600,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            userData.phone ?? '전화번호 없음',
-                                            style: TextStyle(
-                                              color: Colors.grey.shade600,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                ElevatedButton(
-                                  onPressed: () =>
-                                      _showProfileEditDialog(context),
-                                  style: ElevatedButton.styleFrom(
-                                    minimumSize: const Size.fromHeight(40),
+                        // 게스트 모드일 때 로그인 유도 UI
+                        if (isGuestMode) ...[
+                          Card(
+                            margin: const EdgeInsets.only(bottom: 16.0),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.account_circle,
+                                    size: 60,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
                                   ),
-                                  child: const Text('프로필 수정'),
-                                ),
-                              ],
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    '로그인',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    '로그인 후 게시글 작성, 댓글, 좋아요 등\n다양한 기능을 이용할 수 있습니다.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      // 로그인 화면으로 이동
+                                      _userDataProvider.clear();
+                                      Navigator.pushNamedAndRemoveUntil(
+                                        context,
+                                        '/login',
+                                        (route) => false,
+                                      );
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      minimumSize: const Size.fromHeight(40),
+                                    ),
+                                    child: const Text('로그인하기'),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
+                        ] else ...[
+                          // 정상 로그인 사용자 프로필 표시
+                          Card(
+                            margin: const EdgeInsets.only(bottom: 16.0),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      GestureDetector(
+                                        onTap: _pickAndUploadImage,
+                                        child: CircleAvatar(
+                                          radius: 40,
+                                          backgroundColor: Colors.grey.shade200,
+                                          backgroundImage: _profileUrl != null
+                                              ? CachedNetworkImageProvider(
+                                                  _profileUrl!,
+                                                )
+                                              : null,
+                                          child: _profileUrl == null
+                                              ? const Icon(
+                                                  Icons.person,
+                                                  size: 40,
+                                                  color: Colors.grey,
+                                                )
+                                              : null,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              userData.name ?? '이름 없음',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              userData.email ?? '',
+                                              style: TextStyle(
+                                                color: Colors.grey.shade600,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              userData.phone ?? '전화번호 없음',
+                                              style: TextStyle(
+                                                color: Colors.grey.shade600,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton(
+                                    onPressed: () =>
+                                        _showProfileEditDialog(context),
+                                    style: ElevatedButton.styleFrom(
+                                      minimumSize: const Size.fromHeight(40),
+                                    ),
+                                    child: const Text('프로필 수정'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
 
                         // 환경 설정
                         const Padding(
@@ -275,24 +329,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
 
-                        ListTile(
-                          leading: const Icon(Icons.favorite),
-                          title: const Text('좋아요'),
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            '/my-liked-posts',
+                        // 로그인 사용자만 볼 수 있는 메뉴
+                        if (!isGuestMode) ...[
+                          ListTile(
+                            leading: const Icon(Icons.favorite),
+                            title: const Text('좋아요'),
+                            onTap: () => Navigator.pushNamed(
+                              context,
+                              '/my-liked-posts',
+                            ),
                           ),
-                        ),
-                        ListTile(
-                          leading: const Icon(Icons.comment),
-                          title: const Text('댓글'),
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            '/my-commented-posts',
+                          ListTile(
+                            leading: const Icon(Icons.comment),
+                            title: const Text('댓글'),
+                            onTap: () => Navigator.pushNamed(
+                              context,
+                              '/my-commented-posts',
+                            ),
                           ),
-                        ),
-                        if (userData.canManage) const Divider(),
-                        if (userData.canManage)
+                        ],
+
+                        // 관리자만 볼 수 있는 메뉴
+                        if (!isGuestMode && userData.canManage) const Divider(),
+                        if (!isGuestMode && userData.canManage)
                           ListTile(
                             leading: const Icon(Icons.image),
                             title: const Text('배너 설정'),
@@ -304,14 +363,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               );
                             },
                           ),
-                        if (userData.canManage)
+                        if (!isGuestMode && userData.canManage)
                           ListTile(
                             leading: const Icon(Icons.campaign),
                             title: const Text('메시지 추가'),
                             subtitle: const Text('관리자 모드'),
                             onTap: () => _showAddMessageDialog(context),
                           ),
-                        if (userData.canManage)
+                        if (!isGuestMode && userData.canManage)
                           ListTile(
                             leading: const Icon(Icons.group),
                             title: const Text('그룹 관리'),
@@ -324,16 +383,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             },
                           ),
                         const Divider(),
-                        ListTile(
-                          leading: const Icon(Icons.help_outline),
-                          title: const Text('문의사항'),
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/inquiry',
-                            );
-                          },
-                        ),
+                        if (!isGuestMode) ...[
+                          ListTile(
+                            leading: const Icon(Icons.help_outline),
+                            title: const Text('문의사항'),
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/inquiry',
+                              );
+                            },
+                          ),
+                        ],
                         ListTile(
                           leading: const Icon(Icons.description),
                           title: const Text('이용약관'),
@@ -345,16 +406,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           onTap: () => _showPrivacyDialog(context),
                         ),
                         const Divider(),
-                        ListTile(
-                          leading: Icon(Icons.logout,
-                              color: Theme.of(context).colorScheme.error),
-                          title: Text(
-                            '로그아웃',
-                            style: TextStyle(
+                        // 로그아웃 버튼 (게스트 모드일 때는 표시하지 않음)
+                        if (!isGuestMode)
+                          ListTile(
+                            leading: Icon(Icons.logout,
                                 color: Theme.of(context).colorScheme.error),
+                            title: Text(
+                              '로그아웃',
+                              style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error),
+                            ),
+                            onTap: () => _handleLogout(context),
                           ),
-                          onTap: () => _handleLogout(context),
-                        ),
                       ],
                     ),
                   ),

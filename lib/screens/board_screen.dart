@@ -285,36 +285,33 @@ class BoardScreenState extends State<BoardScreen> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       slivers: [
                         SliverAppBar(
-                          pinned: true,
-                          floating: false,
-                          expandedHeight: 0,
-                          backgroundColor: Colors.transparent,
-                          flexibleSpace: Container(
-                            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-                            decoration: BoxDecoration(
-                              color: isDarkMode
-                                  ? Colors.black.withAlpha(120)
-                                  : Colors.white.withAlpha(80),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  height: 36,
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 8),
-                                  decoration: BoxDecoration(
-                                    color: isDarkMode
-                                        ? Colors.grey.shade800.withAlpha(230)
-                                        : Colors.white.withAlpha(230),
-                                    borderRadius: BorderRadius.circular(4),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withAlpha(20),
-                                        spreadRadius: 1,
-                                        blurRadius: 3,
-                                      ),
-                                    ],
-                                  ),
+                          pinned: false,
+                          floating: true,
+                          snap: true,
+                          toolbarHeight: 52,
+                          backgroundColor: isDarkMode
+                              ? Colors.grey.shade900.withAlpha(200)
+                              : Colors.white.withAlpha(179),
+                          title: Row(
+                            children: [
+                              Container(
+                                height: 36,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                decoration: BoxDecoration(
+                                  color: isDarkMode
+                                      ? Colors.grey.shade800.withAlpha(230)
+                                      : Colors.white.withAlpha(230),
+                                  borderRadius: BorderRadius.circular(4),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withAlpha(20),
+                                      spreadRadius: 1,
+                                      blurRadius: 3,
+                                    ),
+                                  ],
+                                ),
+                                child: DropdownButtonHideUnderline(
                                   child: DropdownButton<int>(
                                     value: _selectedCategoryId,
                                     items: _categories.map((category) {
@@ -349,102 +346,146 @@ class BoardScreenState extends State<BoardScreen> {
                                     isDense: true,
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 4),
-                                    underline: Container(height: 0),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Container(
-                                    height: 36,
-                                    decoration: BoxDecoration(
-                                      color: isDarkMode
-                                          ? Colors.grey.shade800.withAlpha(230)
-                                          : Colors.white.withAlpha(179),
-                                      borderRadius: BorderRadius.circular(4),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withAlpha(20),
-                                          spreadRadius: 1,
-                                          blurRadius: 3,
-                                        ),
-                                      ],
-                                    ),
-                                    child: TextField(
-                                      controller: _searchController,
-                                      decoration: InputDecoration(
-                                        hintText: '검색어를 입력하세요',
-                                        hintStyle: TextStyle(
-                                          fontSize: 11,
-                                          color: isDarkMode
-                                              ? Colors.grey.shade400
-                                              : Colors.black54,
-                                        ),
-                                        prefixIcon: Icon(
-                                          Icons.search,
-                                          size: 18,
-                                          color: isDarkMode
-                                              ? Colors.white
-                                              : Colors.black87,
-                                        ),
-                                        suffixIcon:
-                                            _searchController.text.isNotEmpty
-                                                ? IconButton(
-                                                    icon: Icon(
-                                                      Icons.clear,
-                                                      size: 16,
-                                                      color: isDarkMode
-                                                          ? Colors.white
-                                                          : Colors.black87,
-                                                    ),
-                                                    onPressed: _clearSearch,
-                                                    padding:
-                                                        const EdgeInsets.all(4),
-                                                  )
-                                                : null,
-                                        border: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: isDarkMode
-                                                ? Colors.grey.shade700
-                                                : Colors.white.withAlpha(77),
-                                          ),
-                                        ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: isDarkMode
-                                                ? Colors.grey.shade700
-                                                : Colors.white.withAlpha(77),
-                                          ),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: isDarkMode
-                                                ? Colors.grey.shade600
-                                                : Colors.white.withAlpha(128),
-                                          ),
-                                        ),
-                                        filled: true,
-                                        fillColor: Colors.transparent,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                          vertical: 0,
-                                          horizontal: 8,
-                                        ),
-                                        isDense: true,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Container(
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: isDarkMode
+                                        ? Colors.grey.shade800.withAlpha(230)
+                                        : Colors.white.withAlpha(179),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                        color: isDarkMode
+                                            ? Colors.grey.shade700
+                                            : Colors.white.withAlpha(77)),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withAlpha(20),
+                                        spreadRadius: 1,
+                                        blurRadius: 3,
                                       ),
-                                      onSubmitted: (_) => _performSearch(),
-                                      onChanged: (value) {
-                                        setState(() {});
-                                      },
-                                      style: TextStyle(
+                                    ],
+                                  ),
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 4),
+                                  child: TextField(
+                                    controller: _searchController,
+                                    decoration: InputDecoration(
+                                      hintText: '검색어를 입력하세요',
+                                      hintStyle: TextStyle(
+                                        fontSize: 11,
+                                        color: isDarkMode
+                                            ? Colors.grey.shade400
+                                            : Colors.black54,
+                                      ),
+                                      prefixIcon: Icon(
+                                        Icons.search,
+                                        size: 18,
                                         color: isDarkMode
                                             ? Colors.white
                                             : Colors.black87,
                                       ),
+                                      suffixIcon: _searchController
+                                              .text.isNotEmpty
+                                          ? IconButton(
+                                              icon: Icon(
+                                                Icons.clear,
+                                                size: 16,
+                                                color: isDarkMode
+                                                    ? Colors.white
+                                                    : Colors.black87,
+                                              ),
+                                              onPressed: _clearSearch,
+                                              padding: const EdgeInsets.all(4),
+                                            )
+                                          : null,
+                                      border: OutlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: isDarkMode
+                                              ? Colors.grey.shade700
+                                              : Colors.white.withAlpha(77),
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: isDarkMode
+                                              ? Colors.grey.shade700
+                                              : Colors.white.withAlpha(77),
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: isDarkMode
+                                              ? Colors.grey.shade600
+                                              : Colors.white.withAlpha(130),
+                                        ),
+                                      ),
+                                      filled: true,
+                                      fillColor: Colors.transparent,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                        vertical: 0,
+                                        horizontal: 8,
+                                      ),
+                                      isDense: true,
+                                    ),
+                                    onSubmitted: (_) => _performSearch(),
+                                    onChanged: (value) {
+                                      setState(() {});
+                                    },
+                                    style: TextStyle(
+                                      color: isDarkMode
+                                          ? Colors.white
+                                          : Colors.black87,
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 4),
+                              SizedBox(
+                                height: 36,
+                                width: 36,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: _searchController.text.isEmpty
+                                        ? isDarkMode
+                                            ? Colors.grey.shade700.withAlpha(60)
+                                            : Colors.grey.withAlpha(60)
+                                        : isDarkMode
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withAlpha(200)
+                                            : Theme.of(context)
+                                                .primaryColor
+                                                .withAlpha(230),
+                                    borderRadius: BorderRadius.circular(4),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withAlpha(20),
+                                        spreadRadius: 1,
+                                        blurRadius: 3,
+                                      ),
+                                    ],
+                                  ),
+                                  child: IconButton(
+                                    onPressed: _searchController.text.isEmpty
+                                        ? null
+                                        : _performSearch,
+                                    icon: const Icon(
+                                      Icons.search,
+                                      size: 18,
+                                      color: Colors.white,
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         if (_searchQuery?.isNotEmpty == true)
