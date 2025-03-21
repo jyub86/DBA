@@ -20,6 +20,7 @@ import 'package:dba/screens/church_event_form_screen.dart';
 import 'package:dba/screens/church_event_management_screen.dart';
 import 'package:dba/screens/banner_settings_screen.dart';
 import 'package:dba/screens/comments_screen.dart';
+import 'package:dba/screens/email_login_screen.dart';
 import 'package:dba/widgets/terms_webview.dart';
 import 'package:dba/models/group_model.dart';
 import 'package:dba/models/post_model.dart';
@@ -55,6 +56,7 @@ class AppRoutes {
   static const String bannerSettings = '/banner-settings';
   static const String comments = '/comments';
   static const String termsWebview = '/terms-webview';
+  static const String emailLogin = '/email-login';
 
   // 전역 변수로 알림 화면으로 이동해야 하는지 여부를 저장
   static bool shouldNavigateToNotification = false;
@@ -107,6 +109,12 @@ class AppRoutes {
       case loginCallback:
         return _createPageRoute(
           const LoginScreen(),
+          settings,
+        );
+
+      case emailLogin:
+        return _createPageRoute(
+          const EmailLoginScreen(),
           settings,
         );
 

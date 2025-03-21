@@ -490,4 +490,112 @@ class AuthService {
       _isHandlingDeepLink = false;
     }
   }
+
+  /// 이메일/비밀번호 로그인 처리
+  Future<void> handleEmailLogin(
+      BuildContext context, String email, String password) async {
+    if (_isHandlingDeepLink) return;
+
+    try {
+      _isHandlingDeepLink = true;
+
+      // 현재 세션이 있다면 로그아웃
+      final currentSession = Supabase.instance.client.auth.currentSession;
+      if (currentSession != null) {
+        await Supabase.instance.client.auth.signOut();
+      }
+
+      // 상태 초기화
+      dispose();
+      _isHandlingDeepLink = false;
+
+      // 딥링크 리스너 설정
+      setupDeepLinkListener(context);
+
+      // 이메일/비밀번호로 로그인
+      final response = await Supabase.instance.client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      if (response.session == null) {
+        throw Exception('로그인에 실패했습니다.');
+      }
+
+      if (context.mounted) {
+        await checkAndNavigate(context);
+      }
+    } catch (e, stackTrace) {
+      LoggerService.error('이메일 로그인 처리 중 오류 발생', e, stackTrace);
+      if (context.mounted) {
+        String errorMessage = '로그인 처리 중 오류가 발생했습니다.';
+        if (e.toString().contains('Invalid login credentials')) {
+          errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
+        } else if (e.toString().contains('Email not confirmed')) {
+          errorMessage = '이메일 인증이 완료되지 않았습니다. 이메일을 확인해주세요.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
+    } finally {
+      _isHandlingDeepLink = false;
+    }
+  }
+
+  /// 이메일 회원가입 처리
+  Future<void> handleEmailSignUp(
+      BuildContext context, String email, String password) async {
+    if (_isHandlingDeepLink) return;
+
+    try {
+      _isHandlingDeepLink = true;
+
+      // 현재 세션이 있다면 로그아웃
+      final currentSession = Supabase.instance.client.auth.currentSession;
+      if (currentSession != null) {
+        await Supabase.instance.client.auth.signOut();
+      }
+
+      // 상태 초기화
+      dispose();
+      _isHandlingDeepLink = false;
+
+      // 딥링크 리스너 설정
+      setupDeepLinkListener(context);
+
+      // 이메일/비밀번호로 회원가입
+      final response = await Supabase.instance.client.auth.signUp(
+        email: email,
+        password: password,
+      );
+
+      if (response.session == null) {
+        // 이메일 인증이 필요한 경우
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('가입 확인 이메일이 발송되었습니다. 이메일을 확인해주세요.')),
+          );
+        }
+      } else {
+        // 이메일 인증 없이 바로 로그인되는 경우
+        if (context.mounted) {
+          await checkAndNavigate(context);
+        }
+      }
+    } catch (e, stackTrace) {
+      LoggerService.error('이메일 회원가입 처리 중 오류 발생', e, stackTrace);
+      if (context.mounted) {
+        String errorMessage = '회원가입 처리 중 오류가 발생했습니다.';
+        if (e.toString().contains('User already registered')) {
+          errorMessage = '이미 등록된 이메일입니다.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
+    } finally {
+      _isHandlingDeepLink = false;
+    }
+  }
 }
