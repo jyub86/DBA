@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/banner_model.dart';
@@ -39,7 +38,7 @@ class MainScreenState extends State<MainScreen>
   final GlobalKey<BoardScreenState> _boardKey = GlobalKey();
   final _userDataProvider = UserDataProvider.instance;
   int _currentIndex = 0;
-  bool isLoading = true;
+  bool isLoading = false;
   List<CategoryModel> categories = [];
   List<BannerModel> banners = [];
   Timer? _bannerTimer;
@@ -101,7 +100,9 @@ class MainScreenState extends State<MainScreen>
     super.initState();
     _currentIndex = widget.initialIndex;
 
-    // 배경 이미지를 미리 캐싱하고 로딩 상태 관리 개선
+    // 초기 상태에서는 로딩 상태를 false로 설정
+    isLoading = false;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // 테마 제공자를 통해 현재 테마 상태 가져오기
       final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
@@ -125,11 +126,8 @@ class MainScreenState extends State<MainScreen>
 
             // 배너가 있는 경우 중앙에서 시작하도록 설정
             if (banners.isNotEmpty) {
-              // 렌더링 후 다음 프레임에서 실행하도록 스케줄링
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                // 컨트롤러가 연결되었는지 확인 후 실행
                 if (_bannerController.hasClients) {
-                  // 충분히 큰 숫자로 중앙 위치를 설정 (무한 스크롤을 위해)
                   _bannerController.jumpToPage(1000 * banners.length);
                 }
               });
@@ -137,8 +135,12 @@ class MainScreenState extends State<MainScreen>
           });
         }
       } else {
-        // 데이터가 아직 로드되지 않은 경우에만 로드
-        _loadData();
+        // 로그인 화면에서 메인 화면으로 전환될 때 지연시간을 더 길게 설정
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted && !_globalDataLoaded) {
+            _loadData();
+          }
+        });
       }
     });
 
@@ -166,8 +168,14 @@ class MainScreenState extends State<MainScreen>
   }
 
   Future<void> _loadData() async {
-    // 이미 데이터가 로드된 경우 다시 로드하지 않음
     if (_globalDataLoaded && !isLoading) return;
+
+    // 로딩 상태를 false로 유지
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+    }
 
     try {
       if (!mounted) return;
@@ -205,11 +213,8 @@ class MainScreenState extends State<MainScreen>
 
         // 배너가 있는 경우 중앙에서 시작하도록 설정
         if (banners.isNotEmpty) {
-          // 렌더링 후 다음 프레임에서 실행하도록 스케줄링
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            // 컨트롤러가 연결되었는지 확인 후 실행
             if (_bannerController.hasClients) {
-              // 충분히 큰 숫자로 중앙 위치를 설정 (무한 스크롤을 위해)
               _bannerController.jumpToPage(1000 * banners.length);
             }
           });
@@ -301,10 +306,10 @@ class MainScreenState extends State<MainScreen>
       listenable: _userDataProvider,
       builder: (context, _) {
         final userData = _userDataProvider.userData;
+
+        // 사용자 데이터가 로드되지 않은 경우, 완전히 투명한 빈 화면 표시
         if (userData == null) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const SizedBox.shrink();
         }
 
         // 로그인 유도 화면을 구축하는 함수
@@ -449,45 +454,44 @@ class MainScreenState extends State<MainScreen>
             isDarkMode ? _globalDarkBackgroundLoaded : _globalBackgroundLoaded;
 
         // 배경 이미지와 콘텐츠를 함께 로드하여 깜빡임 방지
-        final Widget content = Container(
-          decoration: BoxDecoration(
-            image: isAppropriateBackgroundLoaded
-                ? DecorationImage(
-                    image: CachedNetworkImageProvider(
-                      isDarkMode
-                          ? SupabaseConstants.backgroundImageDark
-                          : SupabaseConstants.backgroundImage,
-                    ),
-                    fit: BoxFit.cover,
-                  )
-                : null,
-            color: isAppropriateBackgroundLoaded
-                ? null
-                : isDarkMode
-                    ? Theme.of(context).colorScheme.surface
-                    : Colors.white,
-          ),
-          child: Scaffold(
-            backgroundColor: Colors.transparent,
-            body: SafeArea(
-              bottom: false,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : IndexedStack(
-                        key: const ValueKey('main_content'),
-                        index: _currentIndex,
-                        children: screens,
-                      ),
+        final Widget content = Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                image: isAppropriateBackgroundLoaded
+                    ? DecorationImage(
+                        image: CachedNetworkImageProvider(
+                          isDarkMode
+                              ? SupabaseConstants.backgroundImageDark
+                              : SupabaseConstants.backgroundImage,
+                        ),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+                color: isAppropriateBackgroundLoaded
+                    ? null
+                    : isDarkMode
+                        ? Theme.of(context).colorScheme.surface
+                        : Colors.white,
+              ),
+              child: Scaffold(
+                backgroundColor: Colors.transparent,
+                body: SafeArea(
+                  bottom: false,
+                  child: IndexedStack(
+                    key: const ValueKey('main_content'),
+                    index: _currentIndex,
+                    children: screens,
+                  ),
+                ),
+                endDrawer: const SettingsScreen(),
+                bottomNavigationBar: CustomBottomNavigationBar(
+                  currentIndex: _currentIndex,
+                  onIndexChanged: _handleNavigationTap,
+                ),
               ),
             ),
-            endDrawer: const SettingsScreen(),
-            bottomNavigationBar: CustomBottomNavigationBar(
-              currentIndex: _currentIndex,
-              onIndexChanged: _handleNavigationTap,
-            ),
-          ),
+          ],
         );
 
         // 뒤로가기 처리를 위한 WillPopScope 사용
@@ -526,10 +530,7 @@ class MainScreenState extends State<MainScreen>
             }
             return true;
           },
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: content,
-          ),
+          child: content,
         );
       },
     );
@@ -632,9 +633,8 @@ class MainScreenState extends State<MainScreen>
                                   child: CachedNetworkImage(
                                     imageUrl: banners[bannerIndex].imageUrl,
                                     fit: BoxFit.cover,
-                                    placeholder: (context, url) => const Center(
-                                      child: CircularProgressIndicator(),
-                                    ),
+                                    placeholder: (context, url) =>
+                                        const SizedBox(),
                                     errorWidget: (context, url, error) =>
                                         const Center(
                                       child: Icon(Icons.error),

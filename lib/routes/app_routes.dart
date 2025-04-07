@@ -158,8 +158,8 @@ class AppRoutes {
               child: child,
             );
           },
-          // 전환 시간을 짧게 설정하여 빠르게 화면 전환
-          transitionDuration: const Duration(milliseconds: 150),
+          // 전환 시간을 더 길게 설정하여 로딩 인디케이터 중복 문제 해결
+          transitionDuration: const Duration(milliseconds: 800),
         );
 
       case board:

@@ -16,7 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
   final UserDataProvider _userDataProvider = UserDataProvider.instance;
   final LoginSettingsService _loginSettingsService = LoginSettingsService();
-  bool _isLoading = true;
+  bool _isLoading = false;
   Map<String, bool> _loginMethods = {};
 
   @override
@@ -123,184 +123,165 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           SafeArea(
             child: Center(
-              child: _isLoading
-                  ? const CircularProgressIndicator()
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Spacer(),
+                  Image.asset(
+                    'assets/images/church_logo.png',
+                    width: 200,
+                  ),
+                  const Spacer(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Column(
                       children: [
-                        const Spacer(),
-                        Image.asset(
-                          'assets/images/church_logo.png',
-                          width: 200,
-                        ),
-                        const Spacer(),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Column(
-                            children: [
-                              // 이메일 로그인 버튼 (설정에 따라 표시)
-                              if (_loginMethods['email'] == true) ...[
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: _isLoading
-                                        ? null
-                                        : _navigateToEmailLogin,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          Theme.of(context).primaryColor,
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 16),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      'Continue with Email',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                              ],
-
-                              // 카카오 로그인 버튼 (설정에 따라 표시)
-                              if (_loginMethods['kakao'] == true) ...[
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed:
-                                        _isLoading ? null : _handleKakaoLogin,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFFFFE500),
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 16),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      'Continue with Kakao',
-                                      style: TextStyle(
-                                        color: Colors.black87,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                              ],
-
-                              // 애플 로그인 버튼 (iOS 및 설정에 따라 표시)
-                              if (Platform.isIOS &&
-                                  _loginMethods['apple'] == true) ...[
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed:
-                                        _isLoading ? null : _handleAppleLogin,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.black,
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 16),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      'Continue with Apple',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                              ],
-
-                              // 구글 로그인 버튼 (설정에 따라 표시)
-                              if (_loginMethods['google'] == true) ...[
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed:
-                                        _isLoading ? null : _handleGoogleLogin,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 16),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        side: BorderSide(
-                                            color: Colors.grey.shade300),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'Continue with Google',
-                                      style: TextStyle(
-                                        color: Colors.grey.shade800,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                              ],
-
-                              // 게스트 로그인 버튼 (항상 표시)
-                              SizedBox(
-                                width: double.infinity,
-                                child: TextButton(
-                                  onPressed:
-                                      _isLoading ? null : _continueAsGuest,
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
-                                  ),
-                                  child: Text(
-                                    '게스트로 계속하기',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    ),
-                                  ),
+                        // 이메일 로그인 버튼 (설정에 따라 표시)
+                        if (_loginMethods['email'] == true) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed:
+                                  _isLoading ? null : _navigateToEmailLogin,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).primaryColor,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '로그인하지 않으면 일부 기능이 제한됩니다.',
+                              child: const Text(
+                                'Continue with Email',
                                 style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                textAlign: TextAlign.center,
                               ),
-                            ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+
+                        // 카카오 로그인 버튼 (설정에 따라 표시)
+                        if (_loginMethods['kakao'] == true) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _handleKakaoLogin,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFFE500),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                'Continue with Kakao',
+                                style: TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+
+                        // 애플 로그인 버튼 (iOS 및 설정에 따라 표시)
+                        if (Platform.isIOS &&
+                            _loginMethods['apple'] == true) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _handleAppleLogin,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.black,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                'Continue with Apple',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+
+                        // 구글 로그인 버튼 (설정에 따라 표시)
+                        if (_loginMethods['google'] == true) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _handleGoogleLogin,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  side: BorderSide(color: Colors.grey.shade300),
+                                ),
+                              ),
+                              child: Text(
+                                'Continue with Google',
+                                style: TextStyle(
+                                  color: Colors.grey.shade800,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+
+                        // 게스트 로그인 버튼 (항상 표시)
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton(
+                            onPressed: _isLoading ? null : _continueAsGuest,
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            child: Text(
+                              '게스트로 계속하기',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 8),
+                        Text(
+                          '로그인하지 않으면 일부 기능이 제한됩니다.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ],
                     ),
-            ),
-          ),
-          if (_isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.3),
-              child: const Center(
-                child: CircularProgressIndicator(),
+                  ),
+                  const SizedBox(height: 32),
+                ],
               ),
             ),
+          ),
         ],
       ),
     );

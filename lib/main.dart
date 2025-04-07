@@ -16,9 +16,6 @@ import 'package:provider/provider.dart';
 import 'package:dba/providers/theme_provider.dart';
 import 'package:dba/constants/theme_constants.dart';
 
-// MainScreen의 상태를 보존하기 위한 전역 키는 더 이상 필요하지 않음
-// final GlobalKey<State<MainScreen>> mainScreenKey = GlobalKey<State<MainScreen>>();
-
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
@@ -410,8 +407,6 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-
   @override
   void initState() {
     super.initState();

@@ -218,11 +218,7 @@ class BoardScreenState extends State<BoardScreen> {
       builder: (context, _) {
         final userData = _userDataProvider.userData;
         if (userData == null) {
-          return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
+          return const SizedBox.shrink();
         }
 
         return PopScope(

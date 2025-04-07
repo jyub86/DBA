@@ -89,14 +89,14 @@ class AuthService {
       // FCM 초기화는 별도로 처리
       _initializeFCMLater();
 
-      // 기존 사용자는 바로 메인 화면으로 이동
-      if (_lastContext != null && _lastContext!.mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-          _lastContext!,
-          '/main',
-          (route) => false,
-        );
-      }
+      // 중복 네비게이션 방지를 위해 checkAndNavigate에서만 처리하도록 수정
+      // if (_lastContext != null && _lastContext!.mounted) {
+      //   Navigator.pushNamedAndRemoveUntil(
+      //     _lastContext!,
+      //     '/main',
+      //     (route) => false,
+      //   );
+      // }
     } catch (e, stackTrace) {
       LoggerService.error('로그인 처리 중 오류 발생', e, stackTrace);
       rethrow;
@@ -105,10 +105,16 @@ class AuthService {
 
   /// 현재 사용자의 인증 상태를 확인하고 적절한 화면으로 이동
   Future<void> checkAndNavigate(BuildContext context) async {
-    final session = Supabase.instance.client.auth.currentSession;
-    if (session == null) return;
+    if (_isHandlingDeepLink) return; // 이미 처리 중이면 중복 실행 방지
+    _isHandlingDeepLink = true;
 
     try {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session == null) {
+        _isHandlingDeepLink = false;
+        return;
+      }
+
       final user = session.user;
       final existingUser = await Supabase.instance.client
           .from('custom_users')
@@ -127,7 +133,11 @@ class AuthService {
           LoggerService.info('애플 로그인: 이름 정보 없음');
         }
 
-        if (!context.mounted) return;
+        if (!context.mounted) {
+          _isHandlingDeepLink = false;
+          return;
+        }
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -146,7 +156,11 @@ class AuthService {
         _initializeFCMLater();
 
         // 메인 화면으로 이동
-        if (!context.mounted) return;
+        if (!context.mounted) {
+          _isHandlingDeepLink = false;
+          return;
+        }
+
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/main',
@@ -155,10 +169,15 @@ class AuthService {
       }
     } catch (e, stackTrace) {
       LoggerService.error('사용자 상태 확인 중 오류 발생', e, stackTrace);
-      if (!context.mounted) return;
+      if (!context.mounted) {
+        _isHandlingDeepLink = false;
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('사용자 상태 확인 중 오류가 발생했습니다.')),
       );
+    } finally {
+      _isHandlingDeepLink = false;
     }
   }
 
