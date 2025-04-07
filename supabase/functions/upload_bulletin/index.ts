@@ -869,4 +869,4 @@ if (import.meta.main) {
   }
 }
 
-// deno run --allow-read --allow-write --allow-net supabase/functions/upload_bulletin/index.ts
+// deno run -A supabase/functions/upload_bulletin/index.ts
