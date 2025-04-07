@@ -37,6 +37,12 @@ void main() async {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
 
+    // Edge-to-Edge 디스플레이 지원 설정
+    // 완전 투명한 시스템 바 설정
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.edgeToEdge,
+    );
+
     // 기본적으로는 세로 모드만 허용하지만, 필요할 때 가로 모드도 가능하게 설정
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -396,22 +402,56 @@ void _checkEnvironmentVariables() {
 }
 
 // 앱이 종료된 상태에서 알림 클릭으로 시작된 경우
-class MyApp extends StatelessWidget {
-  // shouldNavigateToNotification 매개변수를 선택적으로 변경
-  final bool shouldNavigateToNotification;
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
 
-  const MyApp({
-    Key? key,
-    this.shouldNavigateToNotification = false, // 기본값 추가
-  }) : super(key: key);
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    debugPrint('앱 생명주기 상태 변경: $state');
+
+    // 각 화면이 자체적으로 처리하도록 함
+    // 앱 수준에서는 별도 처리 없음
+  }
 
   @override
   Widget build(BuildContext context) {
     // 앱 설정
-    AppRoutes.shouldNavigateToNotification = shouldNavigateToNotification;
+    AppRoutes.shouldNavigateToNotification = false;
 
     // ThemeProvider에 접근
     final themeProvider = Provider.of<ThemeProvider>(context);
+
+    // Edge-to-Edge 디스플레이를 위한 설정
+    // 완전 투명한 시스템 바 설정
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
+        statusBarIconBrightness:
+            themeProvider.isDarkMode ? Brightness.light : Brightness.dark,
+        systemNavigationBarIconBrightness:
+            themeProvider.isDarkMode ? Brightness.light : Brightness.dark,
+      ),
+    );
 
     return MaterialApp(
       title: '부평동부교회',

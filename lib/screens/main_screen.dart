@@ -34,7 +34,8 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => MainScreenState();
 }
 
-class MainScreenState extends State<MainScreen> {
+class MainScreenState extends State<MainScreen>
+    with SingleTickerProviderStateMixin {
   final GlobalKey<BoardScreenState> _boardKey = GlobalKey();
   final _userDataProvider = UserDataProvider.instance;
   int _currentIndex = 0;
@@ -469,6 +470,7 @@ class MainScreenState extends State<MainScreen> {
           child: Scaffold(
             backgroundColor: Colors.transparent,
             body: SafeArea(
+              bottom: false,
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 child: isLoading
@@ -488,12 +490,41 @@ class MainScreenState extends State<MainScreen> {
           ),
         );
 
-        return PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (didPop, dynamic result) {
-            if (!didPop) {
-              _handlePopInvoked();
+        // 뒤로가기 처리를 위한 WillPopScope 사용
+        return WillPopScope(
+          onWillPop: () async {
+            // 현재 게시판(인덱스 1) 또는 다른 화면에 있는 경우, 메인 화면으로 이동
+            if (_currentIndex != 0) {
+              setState(() {
+                _currentIndex = 0;
+              });
+              return false;
             }
+
+            // 메인 화면에서의 뒤로가기 처리
+            // 두 번 뒤로 가기가 일정 시간 내에 발생하면 앱 종료
+            final now = DateTime.now();
+            if (_lastBackPressTime == null ||
+                now.difference(_lastBackPressTime!) >
+                    const Duration(seconds: 2)) {
+              _lastBackPressTime = now;
+
+              // 안전한 영역 고려한 Snackbar 위치 조정
+              final snackBar = SnackBar(
+                content: const Text('뒤로가기를 한번 더 누르면 앱이 종료됩니다.'),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+                margin: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).padding.bottom + 16,
+                  left: 16,
+                  right: 16,
+                ),
+              );
+
+              ScaffoldMessenger.of(context).showSnackBar(snackBar);
+              return false;
+            }
+            return true;
           },
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
@@ -792,50 +823,6 @@ class MainScreenState extends State<MainScreen> {
     }
     if (index == 1) {
       _boardKey.currentState?.updateCategory(0);
-    }
-  }
-
-  // 뒤로가기 버튼 처리 함수
-  Future<void> _handlePopInvoked() async {
-    // 현재 홈 화면이 아닌 경우, 홈 화면으로 이동
-    if (_currentIndex != 0) {
-      if (mounted) {
-        setState(() => _currentIndex = 0);
-      }
-      return; // 앱 종료 방지
-    }
-
-    // 홈 화면에서의 뒤로가기: 종료 확인 다이얼로그 표시
-    final now = DateTime.now();
-
-    // 2초 이내에 두 번 뒤로가기 버튼을 누른 경우 앱 종료
-    if (_lastBackPressTime != null &&
-        now.difference(_lastBackPressTime!) < const Duration(seconds: 2)) {
-      SystemNavigator.pop(); // 앱 종료
-      return;
-    }
-
-    // 종료 확인 다이얼로그 표시
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('앱 종료'),
-        content: const Text('앱을 종료하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('종료'),
-          ),
-        ],
-      ),
-    );
-
-    if (result == true) {
-      SystemNavigator.pop(); // 앱 종료
     }
   }
 }

@@ -9,6 +9,15 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- PIP 모드 관련 권한 추가 -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.REORDER_TASKS" />
+    <!-- PIP를 직접 기능으로 선언 (required는 false로 설정하여 지원하지 않는 기기에서도 앱이 설치되도록 함) -->
+    <uses-feature android:name="android.software.picture_in_picture" android:required="false" />
+    <uses-feature android:name="android.hardware.screen.portrait" />
+    <uses-feature android:name="android.hardware.screen.landscape" />
+    
     <application
         android:name=".MyApplication"
         android:label="부평동부교회"
@@ -28,13 +37,18 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTop"
+            android:launchMode="singleTask"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:showWhenLocked="true"
             android:turnScreenOn="true"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize"
+            android:supportsPictureInPicture="true"
+            android:autoRemoveFromRecents="false"
+            android:alwaysRetainTaskState="true"
+            android:documentLaunchMode="never"
+            android:resizeableActivity="true">
             
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
@@ -86,6 +100,11 @@
         <meta-data
             android:name="android.max_aspect"
             android:value="2.4" />
+            
+        <!-- PIP 모드 설정 -->
+        <meta-data 
+            android:name="android.allow_multiple_resumed_activities" 
+            android:value="true" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
