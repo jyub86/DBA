@@ -8,6 +8,8 @@ import '../providers/user_data_provider.dart';
 import '../models/user_model.dart';
 import 'package:dba/services/logger_service.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
 
 class PostCard extends StatefulWidget {
   final Post post;
@@ -633,12 +635,27 @@ class _PostCardState extends State<PostCard> {
           padding: const EdgeInsets.only(bottom: 8.0),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: CachedNetworkImage(
-              imageUrl: url,
-              fit: BoxFit.contain,
-              placeholder: (context, url) =>
-                  const Center(child: CircularProgressIndicator()),
-              errorWidget: (context, url, error) => const Icon(Icons.error),
+            child: GestureDetector(
+              onTap: () {
+                // 이미지를 클릭하면 전체 화면으로 볼 수 있는 갤러리를 표시
+                final int initialIndex = widget.post.mediaUrls.indexOf(url);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => _ImageGalleryView(
+                      imageUrls: widget.post.mediaUrls,
+                      initialIndex: initialIndex,
+                    ),
+                  ),
+                );
+              },
+              child: CachedNetworkImage(
+                imageUrl: url,
+                fit: BoxFit.contain,
+                placeholder: (context, url) =>
+                    const Center(child: CircularProgressIndicator()),
+                errorWidget: (context, url, error) => const Icon(Icons.error),
+              ),
             ),
           ),
         );
@@ -918,6 +935,87 @@ class _PostCardState extends State<PostCard> {
             const SizedBox(height: 8),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// 전체 화면 이미지 갤러리 위젯
+class _ImageGalleryView extends StatefulWidget {
+  final List<String> imageUrls;
+  final int initialIndex;
+
+  const _ImageGalleryView({
+    required this.imageUrls,
+    required this.initialIndex,
+  });
+
+  @override
+  State<_ImageGalleryView> createState() => _ImageGalleryViewState();
+}
+
+class _ImageGalleryViewState extends State<_ImageGalleryView> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text(
+          '${_currentIndex + 1} / ${widget.imageUrls.length}',
+          style: const TextStyle(color: Colors.white),
+        ),
+      ),
+      body: PhotoViewGallery.builder(
+        scrollPhysics: const BouncingScrollPhysics(),
+        builder: (BuildContext context, int index) {
+          return PhotoViewGalleryPageOptions(
+            imageProvider: CachedNetworkImageProvider(widget.imageUrls[index]),
+            initialScale: PhotoViewComputedScale.contained,
+            minScale: PhotoViewComputedScale.contained * 0.8,
+            maxScale: PhotoViewComputedScale.covered * 2.0,
+            heroAttributes:
+                PhotoViewHeroAttributes(tag: widget.imageUrls[index]),
+          );
+        },
+        itemCount: widget.imageUrls.length,
+        loadingBuilder: (context, event) => Center(
+          child: SizedBox(
+            width: 20.0,
+            height: 20.0,
+            child: CircularProgressIndicator(
+              value: event == null
+                  ? 0
+                  : event.cumulativeBytesLoaded / event.expectedTotalBytes!,
+            ),
+          ),
+        ),
+        backgroundDecoration: const BoxDecoration(
+          color: Colors.black,
+        ),
+        pageController: _pageController,
+        onPageChanged: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
       ),
     );
   }
