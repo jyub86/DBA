@@ -17,6 +17,7 @@ import '../services/logger_service.dart';
 import 'webview_screen.dart';
 import '../providers/theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 
 class MainScreen extends StatefulWidget {
   final int initialIndex;
@@ -528,6 +529,8 @@ class MainScreenState extends State<MainScreen>
               ScaffoldMessenger.of(context).showSnackBar(snackBar);
               return false;
             }
+            // 앱 종료
+            SystemNavigator.pop();
             return true;
           },
           child: content,
