@@ -39,13 +39,18 @@ class MainScreenState extends State<MainScreen>
   final GlobalKey<BoardScreenState> _boardKey = GlobalKey();
   final _userDataProvider = UserDataProvider.instance;
   int _currentIndex = 0;
-  bool isLoading = false;
+  bool isLoading = true;
   List<CategoryModel> categories = [];
   List<BannerModel> banners = [];
   Timer? _bannerTimer;
   final PageController _bannerController = PageController();
   int _currentBannerIndex = 0;
   DateTime? _lastBackPressTime;
+
+  // 로딩 애니메이션을 위한 컨트롤러 추가
+  late AnimationController _loadingAnimController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
 
   // 배경 이미지 로딩 상태 추적
   // 데이터가 이미 로드되었는지 추적하는 전역 변수
@@ -101,8 +106,31 @@ class MainScreenState extends State<MainScreen>
     super.initState();
     _currentIndex = widget.initialIndex;
 
-    // 초기 상태에서는 로딩 상태를 false로 설정
-    isLoading = false;
+    // 로딩 애니메이션 컨트롤러 초기화
+    _loadingAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _loadingAnimController,
+        curve: Curves.easeIn,
+      ),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _loadingAnimController,
+        curve: Curves.easeOutBack,
+      ),
+    );
+
+    // 애니메이션 반복 시작
+    _loadingAnimController.repeat(reverse: true);
+
+    // 초기 상태에서는 로딩 상태를 true로 설정
+    isLoading = true;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // 테마 제공자를 통해 현재 테마 상태 가져오기
@@ -152,6 +180,7 @@ class MainScreenState extends State<MainScreen>
   void dispose() {
     _bannerTimer?.cancel();
     _bannerController.dispose();
+    _loadingAnimController.dispose(); // 애니메이션 컨트롤러 해제
     super.dispose();
   }
 
@@ -171,12 +200,15 @@ class MainScreenState extends State<MainScreen>
   Future<void> _loadData() async {
     if (_globalDataLoaded && !isLoading) return;
 
-    // 로딩 상태를 false로 유지
+    // 로딩 상태를 true로 유지
     if (mounted) {
       setState(() {
-        isLoading = false;
+        isLoading = true;
       });
     }
+
+    // 로딩 시작 시간 기록
+    final startTime = DateTime.now();
 
     try {
       if (!mounted) return;
@@ -206,27 +238,46 @@ class MainScreenState extends State<MainScreen>
               ))
           .toList();
 
-      setState(() {
-        banners = _globalBanners;
-        categories = _globalCategories;
-        isLoading = false;
-        _globalDataLoaded = true; // 데이터 로드 완료 표시
+      // 최소 로딩 시간(1.5초) 보장
+      final elapsedTime = DateTime.now().difference(startTime).inMilliseconds;
+      final remainingTime = 1500 - elapsedTime;
 
-        // 배너가 있는 경우 중앙에서 시작하도록 설정
-        if (banners.isNotEmpty) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_bannerController.hasClients) {
-              _bannerController.jumpToPage(1000 * banners.length);
-            }
-          });
-        }
-      });
+      if (remainingTime > 0) {
+        await Future.delayed(Duration(milliseconds: remainingTime));
+      }
+
+      if (mounted) {
+        setState(() {
+          banners = _globalBanners;
+          categories = _globalCategories;
+          isLoading = false;
+          _globalDataLoaded = true; // 데이터 로드 완료 표시
+
+          // 배너가 있는 경우 중앙에서 시작하도록 설정
+          if (banners.isNotEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_bannerController.hasClients) {
+                _bannerController.jumpToPage(1000 * banners.length);
+              }
+            });
+          }
+        });
+      }
 
       if (banners.isNotEmpty) {
         _startBannerTimer();
       }
     } catch (e) {
       LoggerService.error('데이터 로드 중 에러 발생', e, null);
+
+      // 오류가 발생해도 최소 로딩 시간 보장
+      final elapsedTime = DateTime.now().difference(startTime).inMilliseconds;
+      final remainingTime = 1500 - elapsedTime;
+
+      if (remainingTime > 0) {
+        await Future.delayed(Duration(milliseconds: remainingTime));
+      }
+
       if (mounted) {
         setState(() => isLoading = false);
       }
@@ -533,7 +584,44 @@ class MainScreenState extends State<MainScreen>
             SystemNavigator.pop();
             return true;
           },
-          child: content,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 800),
+            transitionBuilder: (Widget child, Animation<double> animation) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            child: isLoading
+                ? Scaffold(
+                    key: const ValueKey('loading_screen'),
+                    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                    body: Center(
+                      child: AnimatedBuilder(
+                        animation: _loadingAnimController,
+                        builder: (context, child) {
+                          return FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: ScaleTransition(
+                              scale: _scaleAnimation,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Image.asset(
+                                    'assets/images/church_logo.png',
+                                    height: 50,
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.white
+                                        : null,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  )
+                : content,
+          ),
         );
       },
     );
