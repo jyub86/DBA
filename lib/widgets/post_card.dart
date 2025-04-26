@@ -38,6 +38,8 @@ class _PostCardState extends State<PostCard> {
   bool _isYoutubeVideo = false;
   String? _youtubeVideoId;
   YoutubePlayerController? _youtubeController;
+  bool _isExpanded = false;
+  List<String> _youtubeVideoIds = [];
 
   @override
   void initState() {
@@ -45,18 +47,25 @@ class _PostCardState extends State<PostCard> {
     _checkIfLiked();
     _getLikesCount();
     _getCommentsCount();
-    _checkYoutubeVideo();
+    _checkYoutubeVideos();
   }
 
-  void _checkYoutubeVideo() {
+  void _checkYoutubeVideos() {
     if (!mounted) return;
 
-    final videoId = _getYouTubeVideoId(widget.post.mediaUrls);
-    if (videoId != null) {
+    _youtubeVideoIds = [];
+    for (final url in widget.post.mediaUrls) {
+      final videoId = _getYouTubeVideoId([url]);
+      if (videoId != null) {
+        _youtubeVideoIds.add(videoId);
+      }
+    }
+
+    if (_youtubeVideoIds.isNotEmpty) {
       setState(() {
         _isYoutubeVideo = true;
-        _youtubeVideoId = videoId;
-        _initYoutubeController(videoId);
+        _youtubeVideoId = _youtubeVideoIds.first;
+        _initYoutubeController(_youtubeVideoId!);
       });
     }
   }
@@ -383,7 +392,7 @@ class _PostCardState extends State<PostCard> {
                       if (widget.post.content?.isNotEmpty == true)
                         _buildContent(context),
                       if (_isYoutubeVideo)
-                        _buildYouTubeThumbnail(context)
+                        _buildYouTubeVideos(context)
                       else if (widget.post.mediaUrls.isNotEmpty)
                         _buildMediaPreview(context),
                       Row(
@@ -549,128 +558,394 @@ class _PostCardState extends State<PostCard> {
     );
   }
 
-  Widget _buildYouTubeThumbnail(BuildContext context) {
-    if (_youtubeVideoId == null || _youtubeController == null) {
+  Widget _buildYouTubeVideos(BuildContext context) {
+    if (_youtubeVideoIds.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Column(
-          children: [
-            YoutubePlayer(
-              controller: _youtubeController!,
-              showVideoProgressIndicator: true,
-              progressIndicatorColor: Colors.red,
-              progressColors: const ProgressBarColors(
-                playedColor: Colors.red,
-                handleColor: Colors.redAccent,
-              ),
-              onReady: () {
-                // 플레이어가 준비되었을 때의 콜백
-              },
-              onEnded: (metaData) {
-                // 영상이 종료되었을 때의 콜백
-              },
-              bottomActions: [
-                // 기본 컨트롤러 사용
-                const SizedBox(width: 8.0),
-                const CurrentPosition(),
-                const SizedBox(width: 8.0),
-                const ProgressBar(
-                  isExpanded: true,
-                  colors: ProgressBarColors(
-                    playedColor: Colors.red,
-                    handleColor: Colors.redAccent,
-                  ),
+    final visibleVideoIds =
+        _isExpanded ? _youtubeVideoIds : [_youtubeVideoIds.first];
+    final hasMoreVideos = _youtubeVideoIds.length > 1;
+
+    return Column(
+      children: [
+        Column(
+          children: visibleVideoIds.map((videoId) {
+            // 현재 비디오가 첫 번째가 아니면 컨트롤러 생성
+            if (videoId != _youtubeVideoId) {
+              final controller = YoutubePlayerController(
+                initialVideoId: videoId,
+                flags: const YoutubePlayerFlags(
+                  autoPlay: false,
+                  mute: false,
+                  disableDragSeek: false,
+                  loop: false,
+                  isLive: false,
+                  forceHD: true,
+                  enableCaption: false,
+                  useHybridComposition: true,
                 ),
-                const SizedBox(width: 8.0),
-                const RemainingDuration(),
-                const SizedBox(width: 8.0),
-                // 커스텀 전체화면 버튼
-                IconButton(
-                  icon: const Icon(
-                    Icons.fullscreen,
-                    color: Colors.white,
-                  ),
-                  onPressed: () async {
-                    // 현재 재생 위치 가져오기
-                    final position = _youtubeController!.value.position;
-                    final seconds = position.inSeconds;
+              );
 
-                    // 플레이어 일시 정지 (전환 중 계속 재생 방지)
-                    _youtubeController!.pause();
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: YoutubePlayer(
+                    controller: controller,
+                    showVideoProgressIndicator: true,
+                    progressIndicatorColor: Colors.red,
+                    progressColors: const ProgressBarColors(
+                      playedColor: Colors.red,
+                      handleColor: Colors.redAccent,
+                    ),
+                    onReady: () {},
+                    onEnded: (metaData) {},
+                    bottomActions: [
+                      const SizedBox(width: 8.0),
+                      const CurrentPosition(),
+                      const SizedBox(width: 8.0),
+                      const ProgressBar(
+                        isExpanded: true,
+                        colors: ProgressBarColors(
+                          playedColor: Colors.red,
+                          handleColor: Colors.redAccent,
+                        ),
+                      ),
+                      const SizedBox(width: 8.0),
+                      const RemainingDuration(),
+                      const SizedBox(width: 8.0),
+                      IconButton(
+                        icon: const Icon(Icons.fullscreen, color: Colors.white),
+                        onPressed: () {
+                          final position = controller.value.position;
+                          final seconds = position.inSeconds;
+                          controller.pause();
 
-                    // 전체화면 스크린으로 이동하면서 현재 재생 위치 전달
-                    if (_youtubeVideoId != null && context.mounted) {
-                      Navigator.pushNamed(
-                        context,
-                        '/youtube-player',
-                        arguments: {
-                          'videoId': _youtubeVideoId,
-                          'startSeconds': seconds,
+                          if (context.mounted) {
+                            Navigator.pushNamed(
+                              context,
+                              '/youtube-player',
+                              arguments: {
+                                'videoId': videoId,
+                                'startSeconds': seconds,
+                              },
+                            );
+                          }
                         },
-                      );
-                    }
-                  },
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ],
+              );
+            }
+
+            // 첫 번째 비디오는 기존에 초기화된 컨트롤러 사용
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Column(
+                  children: [
+                    YoutubePlayer(
+                      controller: _youtubeController!,
+                      showVideoProgressIndicator: true,
+                      progressIndicatorColor: Colors.red,
+                      progressColors: const ProgressBarColors(
+                        playedColor: Colors.red,
+                        handleColor: Colors.redAccent,
+                      ),
+                      onReady: () {},
+                      onEnded: (metaData) {},
+                      bottomActions: [
+                        const SizedBox(width: 8.0),
+                        const CurrentPosition(),
+                        const SizedBox(width: 8.0),
+                        const ProgressBar(
+                          isExpanded: true,
+                          colors: ProgressBarColors(
+                            playedColor: Colors.red,
+                            handleColor: Colors.redAccent,
+                          ),
+                        ),
+                        const SizedBox(width: 8.0),
+                        const RemainingDuration(),
+                        const SizedBox(width: 8.0),
+                        IconButton(
+                          icon:
+                              const Icon(Icons.fullscreen, color: Colors.white),
+                          onPressed: () async {
+                            final position = _youtubeController!.value.position;
+                            final seconds = position.inSeconds;
+                            _youtubeController!.pause();
+
+                            if (_youtubeVideoId != null && context.mounted) {
+                              Navigator.pushNamed(
+                                context,
+                                '/youtube-player',
+                                arguments: {
+                                  'videoId': _youtubeVideoId,
+                                  'startSeconds': seconds,
+                                },
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         ),
-      ),
+        if (hasMoreVideos && !_isExpanded)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+            child: Align(
+              alignment: Alignment.center,
+              child: TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _isExpanded = true;
+                  });
+                },
+                icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+                label: Text(
+                  '펼쳐 보기 (${_youtubeVideoIds.length - 1})',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                style: TextButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  minimumSize: const Size(0, 30),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  backgroundColor:
+                      Theme.of(context).colorScheme.surface.withOpacity(0.7),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
   Widget _buildMediaPreview(BuildContext context) {
+    final List<String> mediaUrls = widget.post.mediaUrls;
+    if (mediaUrls.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final visibleUrls = _isExpanded ? mediaUrls : [mediaUrls.first];
+    final hasMoreImages = mediaUrls.length > 1;
+
     return Column(
-      children: widget.post.mediaUrls.map((url) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8.0),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: GestureDetector(
-              onTap: () {
-                // 이미지를 클릭하면 전체 화면으로 볼 수 있는 갤러리를 표시
-                final int initialIndex = widget.post.mediaUrls.indexOf(url);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => _ImageGalleryView(
-                      imageUrls: widget.post.mediaUrls,
-                      initialIndex: initialIndex,
-                    ),
+      children: [
+        Column(
+          children: visibleUrls.map((url) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: GestureDetector(
+                  onTap: () {
+                    // 이미지를 클릭하면 전체 화면으로 볼 수 있는 갤러리를 표시
+                    final int initialIndex = mediaUrls.indexOf(url);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => _ImageGalleryView(
+                          imageUrls: mediaUrls,
+                          initialIndex: initialIndex,
+                        ),
+                      ),
+                    );
+                  },
+                  child: CachedNetworkImage(
+                    imageUrl: url,
+                    fit: BoxFit.contain,
+                    placeholder: (context, url) =>
+                        const Center(child: CircularProgressIndicator()),
+                    errorWidget: (context, url, error) =>
+                        const Icon(Icons.error),
                   ),
-                );
-              },
-              child: CachedNetworkImage(
-                imageUrl: url,
-                fit: BoxFit.contain,
-                placeholder: (context, url) =>
-                    const Center(child: CircularProgressIndicator()),
-                errorWidget: (context, url, error) => const Icon(Icons.error),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        if (hasMoreImages && !_isExpanded)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
+            child: Align(
+              alignment: Alignment.center,
+              child: TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _isExpanded = true;
+                  });
+                },
+                icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+                label: Text(
+                  '펼쳐 보기 (${mediaUrls.length - 1})',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                style: TextButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  minimumSize: const Size(0, 30),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  backgroundColor:
+                      Theme.of(context).colorScheme.surface.withOpacity(0.7),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
               ),
             ),
           ),
-        );
-      }).toList(),
+      ],
     );
   }
 
   Widget _buildContent(BuildContext context) {
+    // 내용이 없으면 빈 위젯 반환
+    if (widget.post.content == null || widget.post.content!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // 텍스트 스타일 정의
+    final textStyle = Theme.of(context).textTheme.bodyMedium;
+    final Color textColor = textStyle?.color ?? Colors.black;
+
+    // 최대 라인 수 정의
+    const int maxLines = 10;
+
+    // TextPainter를 사용하여 실제 텍스트의 줄 수를 계산
+    final textSpan = TextSpan(
+      text: widget.post.content!,
+      style: textStyle,
+    );
+
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+      maxLines: maxLines + 1,
+    );
+
+    // 화면 너비에 맞게 layout 계산
+    final screenWidth = MediaQuery.of(context).size.width;
+    const padding = 32.0; // 좌우 패딩 (16 + 16)
+    textPainter.layout(maxWidth: screenWidth - padding);
+
+    // 실제 텍스트가 maxLines보다 적거나 같은지 확인
+    final bool isTextShort = textPainter.didExceedMaxLines == false;
+
+    // 짧은 텍스트는 확장이 필요 없으므로 단순 텍스트로 표시
+    if (isTextShort) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          widget.post.content!,
+          style: textStyle,
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Text(
-        widget.post.content!,
-        style: Theme.of(context).textTheme.bodyMedium,
-        maxLines: 3,
-        overflow: TextOverflow.ellipsis,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
+            child: !_isExpanded
+                ? ShaderMask(
+                    shaderCallback: (Rect bounds) {
+                      return LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          textColor,
+                          textColor,
+                          textColor.withOpacity(0.3),
+                        ],
+                        stops: const [0.0, 0.8, 1.0],
+                      ).createShader(bounds);
+                    },
+                    blendMode: BlendMode.dstIn,
+                    child: Text(
+                      widget.post.content!,
+                      style: textStyle,
+                      maxLines: maxLines,
+                    ),
+                  )
+                : Text(
+                    widget.post.content!,
+                    style: textStyle,
+                  ),
+          ),
+          if (!_isExpanded)
+            Align(
+              alignment: Alignment.center,
+              child: TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _isExpanded = true;
+                  });
+                },
+                icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+                label: const Text('더 보기',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                style: TextButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  minimumSize: const Size(0, 30),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  backgroundColor:
+                      Theme.of(context).colorScheme.surface.withOpacity(0.7),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+          if (_isExpanded)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _isExpanded = false;
+                  });
+                },
+                icon: const Icon(Icons.keyboard_arrow_up, size: 20),
+                label: const Text('접기',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                style: TextButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: const Size(0, 30),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
