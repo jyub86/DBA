@@ -768,130 +768,153 @@ class MainScreenState extends State<MainScreen>
               // 메뉴 그리드
               Padding(
                 padding: EdgeInsets.all(padding),
-                child: GridView.count(
-                  crossAxisCount: isLandscape ? 3 : 2,
-                  padding: EdgeInsets.all(padding),
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: padding,
-                  crossAxisSpacing: padding,
-                  childAspectRatio: isLandscape ? 3.0 : 2.0,
-                  children: [
-                    ...categories.map((category) {
-                      return _buildMenuButton(
-                        label: category.name,
-                        iconUrl: category.iconUrl,
-                        onTap: () {
-                          setState(() => _currentIndex = 1);
-                          _boardKey.currentState?.updateCategory(category.id);
-                        },
-                      );
-                    }),
-                    // 교인 연락처 메뉴
-                    ListenableBuilder(
-                      listenable: _userDataProvider,
-                      builder: (context, _) {
-                        final userData = _userDataProvider.userData;
-                        final isMember = userData?.member ?? false;
-                        final isInfoPublic = userData?.isInfoPublic ?? false;
-                        final isGuest = _userDataProvider.isGuestMode;
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // 폰트 크기에 따라 그리드 레이아웃 결정
+                    // MediaQuery에서 텍스트 스케일 팩터를 가져옴
+                    final textScaleFactor =
+                        MediaQuery.of(context).textScaleFactor;
+                    final isLandscape =
+                        constraints.maxWidth > constraints.maxHeight;
 
-                        return _buildMenuButton(
-                          label: '연락처',
-                          iconUrl:
-                              'https://nfivyduwknskpfhuyzeg.supabase.co/storage/v1/object/public/icons//address.png',
-                          onTap: () {
-                            // 게스트 모드 체크를 가장 먼저 수행
-                            if (isGuest) {
-                              // 로그인이 필요하다는 다이얼로그 표시
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('로그인 필요'),
-                                  content: const Text(
-                                      '교인 연락처 기능을 사용하려면 로그인이 필요합니다.'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.of(context).pop(),
-                                      child: const Text('취소'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                        // 로그아웃 처리
-                                        _userDataProvider.clear();
-                                        // 로그인 화면으로 이동
-                                        Navigator.pushNamedAndRemoveUntil(
-                                          context,
-                                          '/login',
-                                          (route) => false,
-                                        );
-                                      },
-                                      child: const Text('로그인하기'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            } else if (!isMember) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('교인 인증 후 사용 가능한 기능입니다.'),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            } else if (!isInfoPublic) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('정보 공개 설정 후 사용 가능한 기능입니다.'),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            } else {
-                              Navigator.pushNamed(
-                                context,
-                                '/yearbook',
-                              );
-                            }
-                          },
-                        );
-                      },
-                    ),
-                    // 교회 일정 메뉴
-                    ListenableBuilder(
-                      listenable: _userDataProvider,
-                      builder: (context, _) {
-                        return _buildMenuButton(
-                            label: '교회 일정',
-                            iconUrl:
-                                'https://nfivyduwknskpfhuyzeg.supabase.co/storage/v1/object/public/icons/calendar.png',
+                    // 텍스트 스케일 팩터가 1.3보다 크면 한 줄에 하나만 표시
+                    final crossAxisCount =
+                        textScaleFactor > 1.3 ? 1 : (isLandscape ? 3 : 2);
+
+                    // childAspectRatio 계산: 폰트 크기에 따라 조정
+                    // 텍스트 스케일 팩터가 클수록 버튼 높이는 약간만 증가하도록 설정
+                    final childAspectRatio = textScaleFactor > 1.3
+                        ? (isLandscape ? 4.0 : 3.0) // 한 줄에 하나일 때는 더 납작하게
+                        : (isLandscape ? 3.0 : 2.0); // 기본 비율 유지
+
+                    return GridView.count(
+                      crossAxisCount: crossAxisCount,
+                      padding: EdgeInsets.all(padding),
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: padding,
+                      crossAxisSpacing: padding,
+                      childAspectRatio: childAspectRatio,
+                      children: [
+                        ...categories.map((category) {
+                          return _buildMenuButton(
+                            label: category.name,
+                            iconUrl: category.iconUrl,
                             onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/church-calendar',
-                              );
-                            });
-                      },
-                    ),
-                    // 홈페이지 메뉴
-                    _buildMenuButton(
-                      label: '홈페이지',
-                      iconUrl:
-                          'https://nfivyduwknskpfhuyzeg.supabase.co/storage/v1/object/public/icons//homepage.png',
-                      onTap: () =>
-                          _handleMenuTap('https://dbchurch.net', '홈페이지'),
-                    ),
-                    // 유튜브 메뉴
-                    _buildMenuButton(
-                      label: '유튜브',
-                      iconUrl:
-                          'https://nfivyduwknskpfhuyzeg.supabase.co/storage/v1/object/public/icons//youtube.png',
-                      onTap: () => _handleMenuTap(
-                          'https://www.youtube.com/@dbchurch', '유튜브'),
-                    ),
-                    // 빈 공간을 위한 투명한 버튼
-                    const SizedBox(),
-                  ],
+                              setState(() => _currentIndex = 1);
+                              _boardKey.currentState
+                                  ?.updateCategory(category.id);
+                            },
+                          );
+                        }),
+                        // 교인 연락처 메뉴
+                        ListenableBuilder(
+                          listenable: _userDataProvider,
+                          builder: (context, _) {
+                            final userData = _userDataProvider.userData;
+                            final isMember = userData?.member ?? false;
+                            final isInfoPublic =
+                                userData?.isInfoPublic ?? false;
+                            final isGuest = _userDataProvider.isGuestMode;
+
+                            return _buildMenuButton(
+                              label: '연락처',
+                              iconUrl:
+                                  'https://nfivyduwknskpfhuyzeg.supabase.co/storage/v1/object/public/icons//address.png',
+                              onTap: () {
+                                // 게스트 모드 체크를 가장 먼저 수행
+                                if (isGuest) {
+                                  // 로그인이 필요하다는 다이얼로그 표시
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text('로그인 필요'),
+                                      content: const Text(
+                                          '교인 연락처 기능을 사용하려면 로그인이 필요합니다.'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(context).pop(),
+                                          child: const Text('취소'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.of(context).pop();
+                                            // 로그아웃 처리
+                                            _userDataProvider.clear();
+                                            // 로그인 화면으로 이동
+                                            Navigator.pushNamedAndRemoveUntil(
+                                              context,
+                                              '/login',
+                                              (route) => false,
+                                            );
+                                          },
+                                          child: const Text('로그인하기'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                } else if (!isMember) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('교인 인증 후 사용 가능한 기능입니다.'),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                } else if (!isInfoPublic) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('정보 공개 설정 후 사용 가능한 기능입니다.'),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                } else {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/yearbook',
+                                  );
+                                }
+                              },
+                            );
+                          },
+                        ),
+                        // 교회 일정 메뉴
+                        ListenableBuilder(
+                          listenable: _userDataProvider,
+                          builder: (context, _) {
+                            return _buildMenuButton(
+                                label: '교회 일정',
+                                iconUrl:
+                                    'https://nfivyduwknskpfhuyzeg.supabase.co/storage/v1/object/public/icons/calendar.png',
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/church-calendar',
+                                  );
+                                });
+                          },
+                        ),
+                        // 홈페이지 메뉴
+                        _buildMenuButton(
+                          label: '홈페이지',
+                          iconUrl:
+                              'https://nfivyduwknskpfhuyzeg.supabase.co/storage/v1/object/public/icons//homepage.png',
+                          onTap: () =>
+                              _handleMenuTap('https://dbchurch.net', '홈페이지'),
+                        ),
+                        // 유튜브 메뉴
+                        _buildMenuButton(
+                          label: '유튜브',
+                          iconUrl:
+                              'https://nfivyduwknskpfhuyzeg.supabase.co/storage/v1/object/public/icons//youtube.png',
+                          onTap: () => _handleMenuTap(
+                              'https://www.youtube.com/@dbchurch', '유튜브'),
+                        ),
+                        // 빈 공간을 위한 투명한 버튼
+                        const SizedBox(),
+                      ],
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 16),
